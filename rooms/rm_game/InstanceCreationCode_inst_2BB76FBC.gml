@@ -1,0 +1,4 @@
+port = 10
+vsbl = 1
+se = se_door_slide
+yy = (y + 50)

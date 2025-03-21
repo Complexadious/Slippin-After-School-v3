@@ -1,0 +1,25 @@
+{
+  "$GMSound":"",
+  "%Name":"se_piano_slam",
+  "audioGroupId":{
+    "name":"audiogroup_default",
+    "path":"audiogroups/audiogroup_default",
+  },
+  "bitDepth":1,
+  "bitRate":128,
+  "compression":0,
+  "conversionMode":0,
+  "duration":3.924036,
+  "name":"se_piano_slam",
+  "parent":{
+    "name":"Sounds",
+    "path":"folders/Sounds.yy",
+  },
+  "preload":false,
+  "resourceType":"GMSound",
+  "resourceVersion":"2.0",
+  "sampleRate":44100,
+  "soundFile":"se_piano_slam.wav",
+  "type":0,
+  "volume":1.0,
+}
