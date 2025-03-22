@@ -7,26 +7,6 @@ for (var i = -16; i < 17; i++) {
 // Network data types and data
 var _dto = buffer_custom_datatype_start + 1
 global.data_type = {
-	//boolean: {id: 0, read: buffer_bool, write: buffer_bool},
-	//byte: {id: 1, read: buffer_s8, write: buffer_s8},
-	//ubyte: {id: 2, read: buffer_u8, write: buffer_u8},
-	//short: {id: 3, read: buffer_s16, write: buffer_s16},
-	//ushort: {id: 4, read: buffer_u16, write: buffer_u16},
-	//int: {id: 5, read: buffer_s32, write: buffer_s32},
-	//uint: {id: 6, read: buffer_u32, write: buffer_u32},
-	//long: {id: 7, read: buffer_s64, write: buffer_s64},
-	//ulong: {id: 8, read: buffer_u64, write: buffer_u64},
-	//fshort: {id: 9, read: buffer_f16, write: buffer_f16},
-	//fint: {id: 10, read: buffer_f32, write: buffer_f32},
-	//flong: {id: 11, read: buffer_f64, write: buffer_f64},
-	//varint: {id: 12, read: buffer_vint, write: buffer_vint},
-	//varlong: {id: 13, read: buffer_vlong, write: buffer_vlong},
-	//str: {id: 14, read: buffer_string, write: buffer_string},
-	//json_str: {id: 15, read: buffer_jstring, write: buffer_jstring},
-	//text: {id: 16, read: buffer_text, write: buffer_text},
-	//position: {id: 17, read: buffer_position, write: buffer_position},
-	//uuid: {id: 18, read: buffer_uuid, write: buffer_uuid},
-	//array: {id: 19, read: buffer_array, write: buffer_array}
 	boolean: {id: _dto, read: buffer_bool, write: buffer_bool},
 	byte: {id: _dto + 1, read: buffer_s8, write: buffer_s8},
 	ubyte: {id: _dto + 2, read: buffer_u8, write: buffer_u8},
@@ -110,14 +90,14 @@ show_debug_message("UUID IS " + _uuid)
 show_debug_message("UUID 16 " + string(buffer_read_ext(uuidbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
 buffer_delete(uuidbuf)
 
-var pos = [32767, 32767, 1, 0]
-var posbuf = buffer_create(32, buffer_fixed, 1)
-buffer_seek(posbuf, buffer_seek_start, 0)
-buffer_write_ext(posbuf, buffer_position, pos)
-buffer_seek(posbuf, buffer_seek_start, 0)
-show_debug_message("POS IS " + string(pos))
-show_debug_message("POS 32 " + string(buffer_read_ext(posbuf)))
-buffer_delete(posbuf)
+//var pos = [32767, 32767, 1, 0]
+//var posbuf = buffer_create(32, buffer_fixed, 1)
+//buffer_seek(posbuf, buffer_seek_start, 0)
+//buffer_write_ext(posbuf, buffer_position, pos)
+//buffer_seek(posbuf, buffer_seek_start, 0)
+//show_debug_message("POS IS " + string(pos))
+//show_debug_message("POS 32 " + string(buffer_read_ext(posbuf)))
+//buffer_delete(posbuf)
 
 var buffer_id = buffer_create(1024, buffer_fixed, 1);
 var original_array = [infinity, NaN, pi];

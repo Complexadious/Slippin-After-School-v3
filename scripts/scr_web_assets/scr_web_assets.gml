@@ -48,18 +48,18 @@ function asset_type_exists(asset_type) {
 
 function ref_web_asset(alias_or_source, asset_type, flags = {}) {
 	var fallback = web_fallback_asset(asset_type)
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/ref_web_asset")}
 	
 	if !asset_type_exists(asset_type)
-		show_debug_message(log_msg_prefix() + "[FUNC ref_web_asset]: Cannot reference web_asset '" + string(alias_or_source) + "' since asset_type '" + string(asset_type) + "' doesn't exist.")
+		__log("Cannot reference web_asset '" + string(alias_or_source) + "' since asset_type '" + string(asset_type) + "' doesn't exist.", "WARNING")
 	
 	// check if asset exists or not
 	if (alias_to_asset(alias_or_source) == noone) && (source_to_asset(alias_or_source) == noone) {
 		// create it if alias_or_source is a source
 		if (web_asset_is_alias_or_source(alias_or_source) == "source") || (global.web_asset_data.asset_types[$ asset_type].REQUIRE_URL == 0) {
 			create_web_asset(alias_or_source, asset_type, alias_or_source, flags)
-			show_debug_message(log_msg_prefix() + "[FUNC ref_web_asset]: Creating a new web_asset since referenced web_asset '" + string(alias_or_source) + "' doesn't exist.")
+			__log("Creating a new web_asset since referenced web_asset '" + string(alias_or_source) + "' doesn't exist.")
 		}
-//		show_debug_message("REF_WEB_ASSET: DOESNT EXIST, USING FALLBACK")
 		return fallback
 	}
 
@@ -68,12 +68,10 @@ function ref_web_asset(alias_or_source, asset_type, flags = {}) {
 	switch web_asset_is_alias_or_source(alias_or_source, true) {
 		case "source": {
 			asset = source_to_asset(alias_or_source)
-//			show_debug_message("REF_WEB_ASSET: IT EXISTS, IS SOURCE")
 			break;
 		}
 		case "alias": {
 			asset = alias_to_asset(alias_or_source)
-//			show_debug_message("REF_WEB_ASSET: IT EXISTS, IS ALIAS")
 			break;
 		}
 	}
@@ -112,6 +110,7 @@ function source_to_asset(source) {
 
 function check_web_asset_references() {
 	var assets = struct_get_names(global.web_asset_data.assets)
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/check_web_asset_references")}
 	
 	for (var i = 0; i < array_length(assets); i++) {
 		var asset = global.web_asset_data.assets[$ assets[i]]
@@ -121,16 +120,17 @@ function check_web_asset_references() {
 		if script_exists(func)
 			script_execute(func, asset)
 		else
-			show_debug_message(log_msg_prefix() + "[FUNC check_web_asset_references]: WARNING! Asset_type '" + string(asset.asset_type) + "' doesn't have a valid SAVE handler for it's web asset '" + string(asset.alias) + "'")
+			__log("Asset_type '" + string(asset.asset_type) + "' doesn't have a valid SAVE handler for it's web asset '" + string(asset.alias) + "'", "WARNING")
 	}	
 }
 
 function web_asset_data_init() {
-	show_debug_message(log_msg_prefix() + "] [web_asset_data_init]: Init stage ran for Web Asset System.")
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_data_init")}
+	__log("Init stage ran for Web Asset System.")
 	
 	if !instance_exists(obj_web_asset_manager) {
 		instance_create_depth(0, 0, 999, obj_web_asset_manager)
-		show_debug_message(log_msg_prefix() + "] [web_asset_data_init]: Created obj_web_asset_manager instance.")
+		__log("Created obj_web_asset_manager instance.")
 	}
 	// init request headers for certain asset_types
 	global.eleven_api_key = "sk_719d7e40357769b38b2b18ba196335c235e74162a483b9b0"
@@ -256,11 +256,12 @@ function web_fallback_asset(asset_type) {
 
 function web_asset(_source, _asset_type, _alias = _source) constructor {
 	var possible_asset_types = struct_get_names(global.web_asset_data.asset_types)
+	var __log = function(msg, type = "INFO") {log(msg, type, "CONSTRUCTOR/web_asset")}
 	if !array_contains(possible_asset_types, _asset_type)
 		show_error("Error constructing web_asset: Provided asset_type (" + string(_asset_type) +") is invalid. Possible asset types are: " + string(possible_asset_types), 1)
 	
 	if !string_starts_with(_source, "http://") && !string_starts_with(_source, "https://") {
-		show_debug_message(log_msg_prefix() + "[web_asset constructor]: WARNING! Source doesn't start with HTTP or HTTPS! (web_asset '" + string(_alias) + "')")
+		__log("Source doesn't start with HTTP or HTTPS! (web_asset '" + string(_alias) + "')", "WARNING")
 		_source = string_insert(_source, "http://", 0)
 	}
 	
@@ -277,14 +278,14 @@ function web_asset(_source, _asset_type, _alias = _source) constructor {
 /// @description Constructs a new web_asset, use ref_web_asset(alias OR source, asset_type) to use it.
 
 function create_web_asset(source, asset_type, alias = source, flags = {}) {
-	var _p = log_msg_prefix() + "[FUNC create_web_asset]: " // log prefix
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/create_web_asset")}
 	
 	if (alias == noone || alias == -4 || alias == "")
 		alias = source
 		
 	// check if its a valid asset_type
 	if !asset_type_exists(asset_type) {
-		show_debug_message(_p + "ERROR! Can't create web_asset '" + string(alias) + "', asset_type '" + string(asset_type) + "' doesn't exist!")
+		__log("Can't create web_asset '" + string(alias) + "', asset_type '" + string(asset_type) + "' doesn't exist!", "ERROR")
 		exit;
 	}
 	
@@ -302,14 +303,14 @@ function create_web_asset(source, asset_type, alias = source, flags = {}) {
 	}
 	
 	if (array_length(required_flags) > 0) { // we are missing flags
-		show_debug_message(_p + "ERROR! Can't create web_asset '" + string(alias) + "', missing flags: " + string(required_flags))
+		__log("Can't create web_asset '" + string(alias) + "', missing flags: " + string(required_flags), "ERROR")
 		exit;
 	}
 
 	// set request flags 
 	_flags.set("request_type", _at.REQUEST_TYPE)
 	if (_at.REQUEST_TYPE != "file") {
-		show_debug_message(_p + "Asset_type request_type is not 'file'. Doing additional request flag stuff processing!")
+		__log("Asset_type request_type is not 'file'. Doing additional request flag stuff processing!")
 	//	{request_type, request_url: "https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128", "request_headers": ds}
 		// have all flags, check if we are gonna do a custom request. if so, process the shit (flags)
 		var _s = replace_stuff_in_strings([_at.REQUEST_URL, _at.REQUEST_QUERY, _at.REQUEST_BODY], flags, "|")
@@ -317,13 +318,13 @@ function create_web_asset(source, asset_type, alias = source, flags = {}) {
 		_flags.set("request_url", _s[0] + _s[1])
 		_flags.set("request_body", _s[2])
 		_flags.set("request_headers", _at.REQUEST_HEADERS)
-		show_debug_message("FLAGS: " + string(_flags.flags))
+		__log("FLAGS: " + string(_flags.flags))
 	}
 	
 	download_file(source, global.web_assets_path + generate_uuid4_string(), _flags)
 	struct_set(wad.assets, alias, wa)
 	
-	show_debug_message(_p + "Created new web " + string(asset_type) + " '" + string(alias) + "' with source '" + string(source) + "' and flags " + string(flags))
+	__log("Created new web " + string(asset_type) + " '" + string(alias) + "' with source '" + string(source) + "' and flags " + string(flags))
 }
 	
 /// @function dfile(url: String, file_path: String, *flags: Struct)
@@ -358,9 +359,10 @@ function dfile(_url, _file_path, _flags = {}) constructor {
 /// @description Queues a file to download within obj_web_asset_manager
 
 function download_file(url, file_path, flags = {}) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/download_file")}
     if !instance_exists(obj_web_asset_manager) {
         var inst = instance_create_depth(0, 0, 999, obj_web_asset_manager)
-        show_debug_message("[FUNC download_file] [Info]: Created obj_web_asset_manager instance, INST: (" + string(inst) + ")")
+        __log("Created obj_web_asset_manager instance, INST: (" + string(inst) + ")")
     }
 
     var df = new dfile(url, file_path, flags)
@@ -384,8 +386,9 @@ function web_asset_is_downloaded_file_valid(asset) {
 
 	// delete file (should be used for all types)
 function web_asset_delete_source_file_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_delete_source_file_handler")}
 	if !struct_exists(global.web_asset_data.downloads, asset.source) {
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_delete_source_file_handler]: WARNING! Web asset '" + string(asset.alias) + "' source file '" + string(asset.source) + "' wasn't found in global.web_asset_data.downloads!")
+		__log("Web asset '" + string(asset.alias) + "' source file '" + string(asset.source) + "' wasn't found in global.web_asset_data.downloads!", "WARNING")
 		return 0	
 	}
 	
@@ -393,25 +396,27 @@ function web_asset_delete_source_file_handler(asset) {
 	var fp = global.web_asset_data.downloads[$ asset.source].file_path
 	if file_exists(fp) {
 		file_delete(fp)
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_delete_source_file_handler]: Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' AND download struct were deleted!")
+		__log("Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' AND download struct were deleted!")
 	} else
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_delete_source_file_handler]: WARNING! Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' wasn't found or doesn't exist! Download struct was still deleted!")
+		__log("Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' wasn't found or doesn't exist! Download struct was still deleted!", "WARNING")
 	struct_remove(global.web_asset_data.downloads, asset.source)
 	return 1
 }
 
 	// sprite
 function web_asset_sprite_save_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sprite_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		asset.reference = sprite_add(path, 0, false, false, 0, 0)
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_sprite_save_handler] Created sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'")
+		__log("Created sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'")
 	}
 	else
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_sprite_save_handler] WARNING! Unable to create sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'")
+		__log("Unable to create sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'", "WARNING")
 }
 
 function web_asset_sprite_delete_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sprite_delete_handler")}
 	var suffix = ""
 	
 	// delete asset
@@ -426,22 +431,24 @@ function web_asset_sprite_delete_handler(asset) {
 	
 	// finally delete web asset from web_asset_data.assets
 	struct_remove(global.web_asset_data, asset.alias) // dekete from assets
-	show_debug_message(log_msg_prefix() + "[FUNC web_asset_sprite_delete_handler] Deleted web asset_sprite '" + string(asset.alias) + "'" + suffix)
+	__log("Deleted web asset_sprite '" + string(asset.alias) + "'" + suffix)
 	exit;
 }
 
 	// sound
 function web_asset_sound_save_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sound_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		asset.reference = audio_create_stream(path)
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_sound_save_handler] Created audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'")
+		__log("Created audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'")
 	}
 	else
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_sound_save_handler] WARNING! Unable to create audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'")
+		__log("Unable to create audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'", "WARNING")
 }
 
 function web_asset_sound_delete_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sound_delete_handler")}
 	var suffix = ""
 	
 	// delete asset
@@ -452,7 +459,7 @@ function web_asset_sound_delete_handler(asset) {
 			suffix += " AND web_sound (" + _r + ")"
 		} else {
 			suffix += " BUT NOT web_sound (" + _r + ")"
-			show_debug_message(log_msg_prefix() + "[FUNC web_asset_sound_delete_handler] WARNING! Couldn't delete web asset_sound '" + string(asset.alias) + "'!")
+			__log("Couldn't delete web asset_sound '" + string(asset.alias) + "'!", "WARNING")
 		}
 	}
 	
@@ -462,24 +469,26 @@ function web_asset_sound_delete_handler(asset) {
 	
 	// finally delete web asset from web_asset_data.assets
 	struct_remove(global.web_asset_data, asset.alias) // dekete from assets
-	show_debug_message(log_msg_prefix() + "[FUNC web_asset_sound_delete_handler] Deleted web asset_sound '" + string(asset.alias) + "'" + suffix)
+	__log("Deleted web asset_sound '" + string(asset.alias) + "'" + suffix)
 	exit;
 }
 
 	// text
 function web_asset_text_save_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_text_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		var file = file_bin_open(path, 0)
 		asset.reference = file_text_read_string(file)
 		file_bin_close(file)
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_text_save_handler] Got web text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'")
+		__log("Got web text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'")
 	}
 	else
-		show_debug_message(log_msg_prefix() + "[FUNC web_asset_text_save_handler] WARNING! Unable to getweb  text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'")
+		__log("Unable to getweb  text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'", "WARNING")
 }
 
 function web_asset_text_delete_handler(asset) {
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_text_delete_handler")}
 	var suffix = ""
 	
 	// delete web asset local downloaded file
@@ -488,7 +497,7 @@ function web_asset_text_delete_handler(asset) {
 	
 	// finally delete web asset from web_asset_data.assets
 	struct_remove(global.web_asset_data, asset.alias) // dekete from assets
-	show_debug_message(log_msg_prefix() + "[FUNC web_asset_text_delete_handler] Deleted web asset_text '" + string(asset.alias) + "'" + suffix)
+	__log("Deleted web asset_text '" + string(asset.alias) + "'" + suffix)
 	exit;
 }
 

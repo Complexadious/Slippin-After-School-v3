@@ -156,7 +156,7 @@ if instance_exists(p)
 		with (obj_network_object) {
 			if (network_obj_type == "player") {
 				// draw glow when flashlight is on
-				if (flash_on && (!hiding))
+				if (flashOn[1] && (!hiding))
 					draw_sprite_ext_safe(spr_light_2_w, 0, ((x - vx) - (dir * -650)), ((y - vy) - 200), 1, 1, 0, c_white, 0.6)
 		        else
 		            draw_sprite_ext_safe(spr_light_1, 0, (x - vx), ((y - vy) - 200), 1, 1, 0, c_white, 0.5)
@@ -203,7 +203,6 @@ if instance_exists(p)
     {
         if ((room == rm_game))
         {
-			// draw other network pkun stuff
 			with (obj_network_object) {
 				if (network_obj_type == "player") {
 					// draw hearts
@@ -218,24 +217,49 @@ if instance_exists(p)
 					var _vy = y - (sprite_height - 20)
 		
 					for (var l = 0; l < lifeMax; l++)
-			        {
-			            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_g, _ui_alp)
-			            if ((l < lifeCur))
-			            {
-			                draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_p, _ui_alp)
-			                //draw_sprite_part_ext(spr_ui_heart, (l % 2), _vx - (spr_width / 2), _vy - (spr_width / 2), spr_width, max(0, ((0.8125 * spr_width) - (((0.8125 * spr_width) * global.charmed) / 100))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + 4), (((_vy) - (spr_width / 2)) + 6), heart_scale, heart_scale, c_white, _ui_alp)
+				    {
+				        draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_g, _ui_alp)
+				        if ((l < lifeCur))
+				        {
+				            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_p, _ui_alp)
+				            //draw_sprite_part_ext(spr_ui_heart, (l % 2), _vx - (spr_width / 2), _vy - (spr_width / 2), spr_width, max(0, ((0.8125 * spr_width) - (((0.8125 * spr_width) * global.charmed) / 100))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + 4), (((_vy) - (spr_width / 2)) + 6), heart_scale, heart_scale, c_white, _ui_alp)
 							draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, (spr_width * 2), max(0, (2 * ((52 * heart_scale) - (((52 * heart_scale) * global.charmed) / 100)))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + (4 * heart_scale)), (((_vy) - (spr_width / 2)) + (6 * heart_scale)), heart_scale, heart_scale, c_white, _ui_alp)
 							//draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, 64, max(0, (52 - ((52 * global.charmed) / 100))), ((((vx + 40) + (64 * l)) - 32) + 4), (((vy + 664) - 32) + 6), 1, 1, c_white, ui_alp)
 						}
-			            else if ((l == lifeCur) && (lifeloss_t > 0))
-			            {
-			                draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), (2 - (lifeloss_t / 60)) * heart_scale, (2 - (lifeloss_t / 60)) * heart_scale, 0, c_white, (lifeloss_t / 60) * _ui_alp)
-			                lifeloss_t -= (lifeloss_t / 10)
-			            }
+				        else if ((l == lifeCur) && (lifeloss_t > 0))
+				        {
+				            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), (2 - (lifeloss_t / 60)) * heart_scale, (2 - (lifeloss_t / 60)) * heart_scale, 0, c_white, (lifeloss_t / 60) * _ui_alp)
+				            lifeloss_t -= (lifeloss_t / 10)
+				        }
 					}
+					
+					//// draw nametag
+					//if (nametag != "") {
+					//	var tx = x;
+					//	var ty = y;
+
+					//	var sh = string_height(nametag);
+					//	var sw = string_width(nametag);
+					//	var txtpad = 4;
+					//	var y_offset = -20;
+
+					//	gpu_set_blendmode(bm_normal);
+					//	draw_set_alpha(0.5);
+					//	draw_set_color(c_black);
+					//	draw_set_font(fnt_minecraft);
+
+					//	var x1 = ((tx - (sw / 2)) - txtpad);
+					//	var x2 = (x1 + (2 * txtpad) + sw);
+					//	var y1 = (((ty - sprite_height) + y_offset) - txtpad);
+					//	var y2 = (y1 + (2 * txtpad) + sh);
+					//	draw_rectangle(x1, y1, x2, y2, 0);
+
+					//	draw_set_alpha(1);
+					//	draw_set_color(c_white);
+					//	draw_text((tx - (sw / 2)), ((ty - sprite_height) + y_offset), nametag);	
+					//}
 				}
 			}
-
             if elps_m
             {
                 if ((elps_s < 2))
@@ -339,6 +363,11 @@ else
     {
         surface_reset_target()
         surface_free(surf)
+    }
+	if surface_exists(no_surf)
+    {
+        surface_reset_target()
+        surface_free(no_surf)
     }
     instance_destroy()
 }

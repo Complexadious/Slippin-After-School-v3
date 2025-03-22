@@ -890,5 +890,5 @@ if global.game_debug
 
 if is_multiplayer() {
 	draw_set_color((check_is_server()) ? c_blue : c_red)
-	draw_text(vx, vy, string_upper(check_is_server() ? "[SERVER]" : "[CLIENT]"))
+	draw_text(vx, vy, string_upper(check_is_server() ? "[SERVER]" : "[CLIENT]") + " [" + string(obj_multiplayer.network.connection_state) + "]")
 }

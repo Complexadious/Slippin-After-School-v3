@@ -27,7 +27,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
             soundDelay = 120
             mob_play_ds(se_shadow)
         }
-        if (target_is_near() && current_target.flash_on && (lostTarget || ((x < current_target.x) && (current_target.dir == -1)) || ((x >= current_target.x) && (current_target.dir == 1))))
+        if (target_is_near() && current_target.flashOn && (lostTarget || ((x < current_target.x) && (current_target.dir == -1)) || ((x >= current_target.x) && (current_target.dir == 1))))
         {
             if ((lifespan > 0))
             {

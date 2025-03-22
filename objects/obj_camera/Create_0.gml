@@ -6,6 +6,7 @@ show_debug_message("Camera created at: " + string(x) + ", " + string(y));
 
 depth = -99999
 surf = surface_create(1280, 720)
+no_surf = surface_create(1280, 720)
 camTarget = -4
 camZoom = 0
 shotaActor = -4

@@ -2,7 +2,7 @@
 // You can write your code in this editor
 
 // multiplayer stuff
-flash_on = global.flashOn
+flashOn = global.flashOn
 hscene_target = global.hscene_target
 pressing_interact = keyboard_check(vk_return)
 lifeCur = global.lifeCur

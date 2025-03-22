@@ -1,7 +1,7 @@
 // Script assets have changed for v2.3.0 see
 // https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 function is_sprite_nsfw(sprite) {
-	return array_contains(global.nsfw_sprites, sprite);
+	return array_contains(global.nsfw_sprites, sprite) || array_contains(asset_get_tags(sprite, asset_sprite), "nsfw")
 }
 
 function draw_sprite_safe(sprite, subimg, x, y) {

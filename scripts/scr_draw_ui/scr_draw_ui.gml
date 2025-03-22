@@ -12,7 +12,8 @@ function draw_ui_mob_spectate_list()
 	
 	// add pkun as an option
 	array_push(_mobs, obj_pkun.object_index)
-	array_push(_mobs, obj_network_object.object_index)
+	if instance_exists(obj_network_object)
+		array_push(_mobs, obj_network_object.object_index)
 	
 	// add all mob instances to the _mobs list with icons in _icons
 	with (obj_p_mob) {
@@ -39,7 +40,7 @@ function draw_ui_mob_spectate_list()
 		var _y = (vy + (360 - mob_frame_height))
 		
 		draw_sprite_stretched_ext(spr_ui_dialog_box, 0, _x, _y, mob_frame_width, mob_frame_height, c_white, 1)
-		draw_sprite_stretched_ext(sprite, img_index, _x, _y, mob_frame_width, mob_frame_height, c_white, 1)
+		draw_sprite_stretched_ext_safe(sprite, img_index, _x, _y, mob_frame_width, mob_frame_height, c_white, 1)
 		
 		// draw arrow above selected thing
 		if (i == global.ui_spectate_list_index) {

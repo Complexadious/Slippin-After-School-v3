@@ -11,17 +11,25 @@ lifeMax = 3
 lifeCur = 3
 charmed = 0
 
+posxq = array_create(2)
+posyq = array_create(2)
+dx = 0
+dy = 0
+
+nametag = ""
+
 network_obj_type = "player"
 
 switch network_obj_type {
 	case "player": {
+		image_speed = adjust_to_fps(0.25)
 		depth = -3
 		hs_stp = 0
 		hs_spr = -4
 		hs_ind = 0
 		hs_spd = 0
 		hs_cum = 0
-		flash_on = 0
+		flashOn = [0, 0]
 		hiding = 0
 		running = 0
 		hscene_target = -4
@@ -41,6 +49,9 @@ switch network_obj_type {
 		lifeMax = 3
 		lifeCur = 3
 		charmed = 0
+		immortal = 0
+		username = "USERNAME"
+		nametag = username
 		break;	
 	}
 	//case "mob": {

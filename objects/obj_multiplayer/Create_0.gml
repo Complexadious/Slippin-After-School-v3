@@ -28,9 +28,10 @@
 // X: 15 bits, Y: 15 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
 #macro BP_BDT buffer_u32
 #macro BP_X_ALLOCATION 15
-#macro BP_Y_ALLOCATION 15
+#macro BP_Y_ALLOCATION 14
 #macro BP_DIR_ALLOCATION 1
 #macro BP_AW_ALLOCATION 1
+#macro BP_FLASH_ALLOCATION 1
 
 // settings
 #macro MAX_CLIENTS 5
@@ -191,7 +192,7 @@ server = {
 	clients: {},
 	settings: {
 		game: {
-			tick_rate: 20, // Game tick rate per second
+			tick_rate: 30, // Game tick rate per second
 			globals_to_sync: {} // Global variables to sync from server to client (server overwrites client)
 		},
 		network: {
@@ -206,16 +207,23 @@ server = {
 // Client Data
 client = {
 	server: {},
-	settings: {},
+	settings: {
+		game: {
+			tick_rate: 30 // Game tick rate per second
+		},
+	},
 	game: {
 		
 	},
 	player: {},
 }
 
-_log = function(msg = "??EMPTY_MESSAGE??", type = "INFO") {log("[" + ((network.role == NETWORK_ROLE.SERVER) ? "SERVER" : "CLIENT") + "]: " + msg, type)}
+_log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {
+	log("[" + ((network.role == NETWORK_ROLE.SERVER) ? "SERVER" : "CLIENT") + "]: " + msg, type)
+}
 
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
+add_timer("SYNC_PKUN_TMR", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_testfunc, []], 1, 0)
 
 //var tmr = new multiplayer_timer(adjust_to_fps(1), 300, [sys_game_restart, []])
 //var tmr_uuid = generate_uuid4_string()
@@ -308,7 +316,7 @@ add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
 //	"mob": [obj_p_mob]
 //}
 //object_var_names_to_sync = {
-//	obj_pkun: ["sprite_index", "image_index", "dir", "x", "y", "immortal", "hscene_target", "hs_spr", "hs_ind", "hs_spd", "hiding", "flash_on", "running", "lp", "np", "intrTarget", "noclip", "intrDone", "intrNeed", "pressing_interact", "lifeloss_t", "lifeCur", "lifeMax", "charmed", "itemSlot"],
+//	obj_pkun: ["sprite_index", "image_index", "dir", "x", "y", "immortal", "hscene_target", "hs_spr", "hs_ind", "hs_spd", "hiding", "flashOn", "running", "lp", "np", "intrTarget", "noclip", "intrDone", "intrNeed", "pressing_interact", "lifeloss_t", "lifeCur", "lifeMax", "charmed", "itemSlot"],
 //	obj_p_mob: ["dir", "x", "y", "state", "doTrack", "target_x", "lost_pkun", "alp", "trace_x", "trace_y"]
 //}
 

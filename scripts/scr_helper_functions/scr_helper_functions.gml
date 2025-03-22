@@ -1,5 +1,3 @@
-// Script assets have changed for v2.3.0 see
-// https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 function log(msg, type = "INFO", src = "UNKNOWN") {
 	var _t = string_upper(string(type))
 	if !is_undefined(object_index)
@@ -92,7 +90,7 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			// assume the next byte is the ID
 			var _byte = buffer_read(buffer_id, BUFFER_DT_ID_TYPE)
 			var _id = id_to_datatype(_byte)
-//			show_debug_message("buffer_read_ext: type is undefined. read dt id is " + string(_id) + ", _byte is " + string(_byte))
+			show_debug_message("buffer_read_ext: type is undefined. read dt id is " + string(_id) + ", _byte is " + string(_byte))
 			return buffer_read_ext(buffer_id, _id)
 		}
         case buffer_vint: {
@@ -136,16 +134,20 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			return value	
 		}
 		case buffer_position: {
-			// X: 15 bits, Y: 15 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
+			// X: 15 bits, Y: 14 bits, DIR: 1 bit, AGAINST_WALL: 1 bit, FLASHLIGHT_ON: 1 bit
 			value = int64(buffer_read(buffer_id, BP_BDT))
 			
-			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION
+			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
 			var _x = logical_rshift(value, total_bits); total_bits -= BP_Y_ALLOCATION
 			var _y = (logical_rshift(value, total_bits) & int64(power(2, BP_Y_ALLOCATION) - 1)); total_bits -= BP_DIR_ALLOCATION
 			var _dir = (logical_rshift(value, total_bits) & int64(power(2, BP_DIR_ALLOCATION) - 1)); total_bits -= BP_AW_ALLOCATION
-			var _aw = (logical_rshift(value, total_bits) & int64(power(2, BP_AW_ALLOCATION) - 1));
+			var _aw = (logical_rshift(value, total_bits) & int64(power(2, BP_AW_ALLOCATION) - 1)); total_bits -= BP_FLASH_ALLOCATION
+			var _flash = (logical_rshift(value, total_bits) & int64(power(2, BP_FLASH_ALLOCATION) - 1));
 			
-			return [_x, _y, _dir, _aw]
+			// make _dir 1 or -1
+			if (_dir != 1) _dir = -1;
+			
+			return [_x, _y, _dir, _aw, _flash]
 		}
 		case buffer_uuid: {
 			var uuid = ""
@@ -236,20 +238,26 @@ function buffer_write_ext(buffer_id, type, value) { //, schema = undefined) {
 		}
 		case buffer_position: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.position.id)
-			// X: 15 bits, Y: 15 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
-			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION
+			//make value[2] (dir) either a 1 or a 0
+			if (value[2] > 1) value[2] = 1;
+			if (value[2] < 0) value[2] = 0;
+			//make value[4] (flash) either a 1 or a 0
+			if (value[4] > 1) value[4] = 1;
+			if (value[4] < 0) value[4] = 0;
+			
+			// X: 15 bits, Y: 14 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
+			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
 			var _pos = int64(0)
 			var _x = int64(value[0]); _pos |= _x << (total_bits)
 			var _y = int64(value[1]); total_bits -= BP_Y_ALLOCATION; _pos |= _y << (total_bits)
 			var _dir = int64(value[2]); total_bits -= BP_DIR_ALLOCATION; _pos |= _dir << (total_bits)
 			var _aw = int64(value[3]); total_bits -= BP_AW_ALLOCATION; _pos |= _aw << (total_bits)
-			show_debug_message("POS: " + string(_pos))
+			var _flash = int64(value[4]); total_bits -= BP_FLASH_ALLOCATION; _pos |= _flash << (total_bits)
 			buffer_write(buffer_id, BP_BDT, _pos)
 			break;
 		}
 		case buffer_uuid: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.uuid.id)
-			show_debug_message("buffer_write_ext: UUID ID IS " + string(global.data_type.uuid.id))
 			value = string_replace_all(value, "-", "")
 			for (var i = 0; i < (string_length(value) / 2); i++) {
 				var pair = "0x" + string_char_at(value, (i * 2) + 1) + string_char_at(value, (i * 2) + 2)

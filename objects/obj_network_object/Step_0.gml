@@ -2,6 +2,30 @@
 // You can write your code in this editor
 switch network_obj_type {
 	case "player": {
+		show_debug_message("POSXQ = " + string(dx) + ", POSYQ = " + string(dy))
+		
+		x += dx
+		y += dy
+		
+		// adjust flashlight
+		if (flashOn[0] != flashOn[1]) {
+			flashOn[0] = flashOn[1]
+			// change happened
+			play_se(se_flash, 1)
+		}
+		
+		// guess current sprite based off of speed
+		if (dx == 0) {
+			sprite_index = spr_pkun_idle
+			image_speed = (1/3)
+		} else if (abs(dx) <= 4) {
+			sprite_index = spr_pkun_walk
+			image_speed = (1/2)
+		} else {
+			sprite_index = spr_pkun_dash
+			image_speed = (1)
+		}
+		
 		// obj_pkun shit
 		if (soundDelay > 0)
 	        soundDelay-= adjust_to_fps(1)
@@ -19,7 +43,7 @@ switch network_obj_type {
 			instance_destroy(hscene_target)
 		
 		var _intrTarget = instance_nearest(x, y, obj_interactable)
-		show_debug_message("NETWORK OBJ LIFECUR = " + string(lifeCur) + ", LIFEMAX = " + string(lifeMax))
+		//show_debug_message("NETWORK OBJ LIFECUR = " + string(lifeCur) + ", LIFEMAX = " + string(lifeMax))
 		//if (_intrTarget != noone) && pressing_interact {
 		//	if ((intrDone) >= (intrNeed)) {
 		//		intrDone = 0

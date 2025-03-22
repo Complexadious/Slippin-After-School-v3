@@ -1,7 +1,7 @@
 /// @description Handle Network Requests
 var event_id = async_load[? "id"]
 show_debug_message("obj_multiplayer NETWORK EVENT FIRED!")
-if ((event_id)) { // == network.server.socket) || (event_id == network.server.connection) || (array_contains(struct_get_names(server.clients), event_id))) {
+if ((event_id > -1)) { // == network.server.socket) || (event_id == network.server.connection) || (array_contains(struct_get_names(server.clients), event_id))) {
 	var type = async_load[? "type"]
 	var sock = async_load[? "socket"]
 	_log("EVENT ID!!! " + string(event_id))
@@ -11,7 +11,7 @@ if ((event_id)) { // == network.server.socket) || (event_id == network.server.co
 			_log("Client (" + string(sock) + ") connected!")
 			
 			var _pid = struct_names_count(server.clients)
-			struct_set(server.clients, sock, _pid)
+			struct_set(server.clients, string(sock), _pid)
 			add_timer(generate_uuid4_string(), adjust_to_fps(1), adjust_to_fps(900))
 			
 			// send packet back to client
@@ -19,7 +19,6 @@ if ((event_id)) { // == network.server.socket) || (event_id == network.server.co
 			//buffer_write(buf, buffer_string, "Connected to server!")
 			//network_send_packet(sock, buf, buffer_get_size(buf))
 			//buffer_delete(buf)
-			game_end()
 			break;	
 		}
 		case network_type_disconnect: {
