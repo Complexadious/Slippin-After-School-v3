@@ -1,12 +1,13 @@
 // Require the caller to pass in its current x and y
 function get_closest_target(_x, _y, _id = noone) {
 	// return the stuff within the timers
-	if (_id != noone) {
-		if !struct_exists(global.targetting_cached, _id)
-			struct_set(global.targetting_cached, (_id), [global.targetting_update_tmr_dur, target_nearest(_x, _y)])
-		return (global.targetting_cached[$ _id][1] == 0) ? obj_pkun : global.targetting_cached[$ _id][1]
-	}
-	return target_nearest(_x, _y);
+	//if (_id != noone) {
+	//	if !struct_exists(global.targetting_cached, _id)
+	//		struct_set(global.targetting_cached, (_id), [global.targetting_update_tmr_dur, target_nearest(_x, _y)])
+	//	return (global.targetting_cached[$ _id][1] == 0) ? obj_pkun : global.targetting_cached[$ _id][1]
+	//}
+	//return target_nearest(_x, _y);
+	return obj_pkun
 }
 
 function target_nearest(_x, _y) {

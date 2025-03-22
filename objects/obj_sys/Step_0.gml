@@ -64,11 +64,16 @@ else
 	global.camera_hide_ui = 0	
 
 // command bar handler
-if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || ((keyboard_check_pressed(global.keybinds[$ "commandBarOpen"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open)))
+if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || ((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open))) {
+	keyboard_clear(global.keybinds[$ "commandBarOpenChat"])
 	toggle_command_bar()
+}
 
 if (global.command_bar_open)
 {
+	if instance_exists(obj_pkun)
+		obj_pkun.intrTarget = noone
+	
 	var content_len = string_length(global.command_bar_content)
 	command_bar_txt_insert_pos = content_len - command_bar_cursor_offset
 	
@@ -86,6 +91,21 @@ if (global.command_bar_open)
 	}
 	
 	var hist_len = array_length(global.command_bar_history)
+	
+	if keyboard_check(vk_enter) {
+		if (string_char_at(global.command_bar_content, 1) == "/") {
+			cmd_execute_command(string_delete(global.command_bar_content, 1, 1))
+			show_debug_message("COMMAND = '" + string_delete(global.command_bar_content, 1, 1) + "'")
+		} else
+			show_debug_message("NOT COMMAND, IS CHAT, MSG = " + global.command_bar_content)
+		if (global.command_bar_content != "") {
+			if (hist_len > 0) && (global.command_bar_content != global.command_bar_history[hist_len - 1])
+				array_push(global.command_bar_history, global.command_bar_content)
+			else if (hist_len == 0)
+				array_push(global.command_bar_history, global.command_bar_content)
+		}
+		toggle_command_bar()
+	}
 	
 	// handle text being typed into bar and cursor move key shit
 
@@ -118,20 +138,6 @@ if (global.command_bar_open)
 	
 	if command_bar_cursor_offset > string_length(global.command_bar_content) - 1
 		command_bar_cursor_offset = string_length(global.command_bar_content) - 1
-	
-	if keyboard_check(vk_enter) {
-		if (string_char_at(global.command_bar_content, 1) == "/")
-			cmd_execute_command(string_delete(global.command_bar_content, 1, 1))
-		else
-			show_debug_message("NOT COMMAND, IS CHAT, MSG = " + global.command_bar_content)
-		if (global.command_bar_content != "") {
-			if (hist_len > 0) && (global.command_bar_content != global.command_bar_history[hist_len - 1])
-				array_push(global.command_bar_history, global.command_bar_content)
-			else if (hist_len == 0)
-				array_push(global.command_bar_history, global.command_bar_content)
-		}
-		toggle_command_bar()
-	}
 	
     // History navigation
     if (hist_len > 0) {

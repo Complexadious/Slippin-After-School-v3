@@ -137,25 +137,25 @@ function multiplayer_send_packet(sockets, buffer) {
 	if !is_array(sockets) sockets = [sockets]
 	for (var i = 0; i < array_length(sockets); i++) {
 		network_send_packet(real(sockets[i]), buffer, buffer_get_size(buffer))
-		show_debug_message("multiplayer_send_packet: Sent packet out! (" + string(sockets[i] + ")"))
+//		show_debug_message("multiplayer_send_packet: Sent packet out! (" + string(sockets[i] + ")"))
 	}
 }
 
 function multiplayer_handle_packet(sock, buffer) {
 	buffer_seek(buffer, buffer_seek_relative, 0)
 	var packet_id = buffer_read_ext(buffer)
-	show_debug_message("*** GOT PACKET! ID IS " + string(packet_id))
+//	show_debug_message("*** GOT PACKET! ID IS " + string(packet_id))
 	buffer_seek(buffer, buffer_seek_relative, 0)
 	
 	var pkt = undefined
 	
 	if ds_map_exists(global.packet_registry, packet_id) {
-		show_debug_message("*** PACKET ID IS FOUND IN REGISTRY!!")	
+//		show_debug_message("*** PACKET ID IS FOUND IN REGISTRY!!")	
 		pkt = new global.packet_registry[? packet_id]()
 		pkt.readPacketData(buffer)
 		pkt.processPacket()
 	} else {
-		show_debug_message("*** PACKET ID IS NOT FOUND IN REGISTRY!!")	
+//		show_debug_message("*** PACKET ID IS NOT FOUND IN REGISTRY!!")	
 	}
 
 /*	
@@ -372,13 +372,13 @@ function PLAY_SB_MOVE_PLAYER_POS(X = 0, Y = 0, DIR = 0, TOUCHING_WALL = 0, FLASH
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
-		show_debug_message("PLAY_SB_MOVE_PLAYER_POS: READ: POS = " + string(self.pos))
+//		show_debug_message("PLAY_SB_MOVE_PLAYER_POS: READ: POS = " + string(self.pos))
 	}
 	writePacketData = function() {
 		var buf = buffer_create(32, buffer_fixed, 1)
 		buffer_seek(buf, buffer_seek_start, 0)
 		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		show_debug_message("PLAY_SB_MOVE_PLAYER_POS: WRITE: POS = " + string(self.pos))
+//		show_debug_message("PLAY_SB_MOVE_PLAYER_POS: WRITE: POS = " + string(self.pos))
 		buffer_write_ext(buf, buffer_position, self.pos)
 		return buf
 	}
@@ -389,11 +389,11 @@ function PLAY_SB_MOVE_PLAYER_POS(X = 0, Y = 0, DIR = 0, TOUCHING_WALL = 0, FLASH
 		with (obj_network_object) {
 			network_obj_type = "player"
 			
-			x -= adjust_to_fps((x - other.pos[0]) / 10);
+			x -= adjust_to_fps((x - other.pos[0]) / 2);
 			array_push(posxq, other.pos[0]);
 			array_shift(posxq)
 			
-			y -= adjust_to_fps((y - other.pos[1]) / 10);
+			y -= adjust_to_fps((y - other.pos[1]) / 2);
 			array_push(posyq, other.pos[1]);
 			array_shift(posyq)
 			

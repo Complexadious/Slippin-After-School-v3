@@ -90,18 +90,14 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			// assume the next byte is the ID
 			var _byte = buffer_read(buffer_id, BUFFER_DT_ID_TYPE)
 			var _id = id_to_datatype(_byte)
-			show_debug_message("buffer_read_ext: type is undefined. read dt id is " + string(_id) + ", _byte is " + string(_byte))
+//			show_debug_message("buffer_read_ext: type is undefined. read dt id is " + string(_id) + ", _byte is " + string(_byte))
 			return buffer_read_ext(buffer_id, _id)
 		}
         case buffer_vint: {
             value = 0;
             while (true) {
                 currentByte = buffer_read(buffer_id, buffer_u8);
-//                show_debug_message("- READ BYTE: " + string(currentByte));
-
                 value |= (currentByte & BUFFER_SEGMENT_BITS) << position;
-//                show_debug_message("- VALUE IS NOW: " + string(value));
-
                 if ((currentByte & BUFFER_CONTINUE_BIT) == 0) break;
                 position += 7;
                 if (position >= 32) show_error("Error reading varint, it's too big!!", 1);
@@ -112,10 +108,7 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
             value = int64(0); // Ensure value is 64-bit
             while (true) {
                 currentByte = buffer_read(buffer_id, buffer_u8);
-                
-                // Ensure proper casting and shifting in 64-bit space
                 value |= int64(currentByte & BUFFER_SEGMENT_BITS) << position;
-
                 if ((currentByte & BUFFER_CONTINUE_BIT) == 0) break;
                 position += 7;
                 if (position >= 64) show_error("Error reading varlong, it's too big!!", 1);

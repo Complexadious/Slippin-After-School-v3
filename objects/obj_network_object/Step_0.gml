@@ -2,8 +2,6 @@
 // You can write your code in this editor
 switch network_obj_type {
 	case "player": {
-		show_debug_message("POSXQ = " + string(dx) + ", POSYQ = " + string(dy))
-		
 		x += dx
 		y += dy
 		
@@ -18,7 +16,7 @@ switch network_obj_type {
 		if (dx == 0) {
 			sprite_index = spr_pkun_idle
 			image_speed = (1/3)
-		} else if (abs(dx) <= 4) {
+		} else if (abs(dx) <= 6) {
 			sprite_index = spr_pkun_walk
 			image_speed = (1/2)
 		} else {

@@ -205,16 +205,20 @@ if instance_exists(p)
         {
 			with (obj_network_object) {
 				if (network_obj_type == "player") {
+					// additional x offset for hearts and name tag so they appear centerd on pkun
+					var x_offset = (5 * dir)
+					
 					// draw hearts
-					var heart_scale = 0.5
+					var heart_scale = 0.33
 					var spr_width = sprite_get_width(spr_ui_heart) * heart_scale
-					var heart_padding = 30
+					var heart_padding = 20
 					var _ui_alp = 1
 //					var c_g = make_color_rgb(36, 36, 36)
 //					var c_p = make_color_hsv(225, (130 + (20 * global.shaderOn)), 255)
-					var start_x_offset = ((lifeMax * spr_width) + (lifeMax - 1 * heart_padding)) / 2
+					var start_x_offset = (((lifeMax * spr_width) + (lifeMax - 1 * heart_padding)) / 2)
+					if (dir == 1) start_x_offset -= (2 * x_offset)
 					var _vx = x - start_x_offset
-					var _vy = y - (sprite_height - 20)
+					var _vy = y - (sprite_height - 25)
 		
 					for (var l = 0; l < lifeMax; l++)
 				    {
@@ -223,7 +227,7 @@ if instance_exists(p)
 				        {
 				            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_p, _ui_alp)
 				            //draw_sprite_part_ext(spr_ui_heart, (l % 2), _vx - (spr_width / 2), _vy - (spr_width / 2), spr_width, max(0, ((0.8125 * spr_width) - (((0.8125 * spr_width) * global.charmed) / 100))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + 4), (((_vy) - (spr_width / 2)) + 6), heart_scale, heart_scale, c_white, _ui_alp)
-							draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, (spr_width * 2), max(0, (2 * ((52 * heart_scale) - (((52 * heart_scale) * global.charmed) / 100)))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + (4 * heart_scale)), (((_vy) - (spr_width / 2)) + (6 * heart_scale)), heart_scale, heart_scale, c_white, _ui_alp)
+							draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, (spr_width * 2.5), max(0, (2 * ((52 * heart_scale) - (((52 * heart_scale) * global.charmed) / 100)))) + (spr_width / 2), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + (4 * heart_scale)), (((_vy) - (spr_width / 2)) + (6 * heart_scale)), heart_scale, heart_scale, c_white, _ui_alp)
 							//draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, 64, max(0, (52 - ((52 * global.charmed) / 100))), ((((vx + 40) + (64 * l)) - 32) + 4), (((vy + 664) - 32) + 6), 1, 1, c_white, ui_alp)
 						}
 				        else if ((l == lifeCur) && (lifeloss_t > 0))
@@ -233,31 +237,29 @@ if instance_exists(p)
 				        }
 					}
 					
-					//// draw nametag
-					//if (nametag != "") {
-					//	var tx = x;
-					//	var ty = y;
+					// draw nametag
+					if (nametag != "") {
+						var sh = sprite_height
+						var sw = sprite_width
+						draw_set_align(fa_center, fa_middle)
+	
+						var txtpad = 4;
+						var y_offset = -8;
 
-					//	var sh = string_height(nametag);
-					//	var sw = string_width(nametag);
-					//	var txtpad = 4;
-					//	var y_offset = -20;
+						draw_set_alpha(0.5);
+						draw_set_color(c_black);
+						draw_set_font(fnt_minecraft);
 
-					//	gpu_set_blendmode(bm_normal);
-					//	draw_set_alpha(0.5);
-					//	draw_set_color(c_black);
-					//	draw_set_font(fnt_minecraft);
+						var x1 = ((x - (string_width(nametag) / 2)) - txtpad) + x_offset
+						var x2 = (x1 + (string_width(nametag)) + (1.5 * txtpad))
+						var y1 = ((y - sprite_height) + y_offset) - ((string_height(nametag) / 2))
+						var y2 = (y1 + (string_height(nametag)))
+						draw_rectangle(x1, y1, x2, y2, 0);
 
-					//	var x1 = ((tx - (sw / 2)) - txtpad);
-					//	var x2 = (x1 + (2 * txtpad) + sw);
-					//	var y1 = (((ty - sprite_height) + y_offset) - txtpad);
-					//	var y2 = (y1 + (2 * txtpad) + sh);
-					//	draw_rectangle(x1, y1, x2, y2, 0);
-
-					//	draw_set_alpha(1);
-					//	draw_set_color(c_white);
-					//	draw_text((tx - (sw / 2)), ((ty - sprite_height) + y_offset), nametag);	
-					//}
+						draw_set_alpha(1);
+						draw_set_color(c_white);
+						draw_text(x + x_offset, (y - sprite_height) + y_offset, nametag);		
+					}
 				}
 			}
             if elps_m

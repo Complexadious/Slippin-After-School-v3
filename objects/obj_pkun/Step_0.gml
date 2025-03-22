@@ -6,9 +6,6 @@ lifeCur = global.lifeCur
 lifeMax = global.lifeMax
 charmed = global.charmed
 itemSlot = global.itemSlot
-
-if keyboard_check_pressed(vk_f3) && is_multiplayer()
-	send_player_join_room_packet()
 	
 if keyboard_check_pressed(ord("Y")) && global.game_debug
 	instance_create_depth(x, y, depth, obj_hachi)
@@ -38,19 +35,19 @@ if (sliding && !audio_is_playing(slideSound))
 else if !sliding
 	audio_stop_sound(slideSound)
 
-if keyboard_check_pressed(ord("T")) && global.game_debug && !global.disable_game_keyboard_input
-{
-	// Define the command for the executable
-	var command;
-	command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
+//if keyboard_check_pressed(ord("T")) && global.game_debug && !global.disable_game_keyboard_input
+//{
+//	// Define the command for the executable
+//	var command;
+//	command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
 
-	// Execute the program asynchronously
-	var process_id;
-	process_id = ProcessExecuteAsync(command);
+//	// Execute the program asynchronously
+//	var process_id;
+//	process_id = ProcessExecuteAsync(command);
 
-	// Optionally, store the process ID for monitoring
-	global.running_process_id = process_id;
-}
+//	// Optionally, store the process ID for monitoring
+//	global.running_process_id = process_id;
+//}
 
 if (keyboard_check_pressed(ord("G")) && global.game_debug) && !global.disable_game_keyboard_input {
 	if timeStop > 0
@@ -290,8 +287,8 @@ if (!game_is_paused())
             {
                 if (adjust_to_fps(intrDone) >= adjust_to_fps(intrNeed))
                 {
-					if is_multiplayer()
-						send_client_interact_request_packet(intrTarget)
+//					if is_multiplayer()
+//						send_client_interact_request_packet(intrTarget)
                     intrDone = 0
                     if (intrTarget.type == "portal")
                     {
@@ -369,8 +366,8 @@ if (!game_is_paused())
     else if keyboard_check_pressed(vk_return) && !global.disable_game_keyboard_input
     {
         hiding = 0
-		if is_multiplayer()
-			send_client_interact_request_packet(intrTarget)
+//		if is_multiplayer()
+//			send_client_interact_request_packet(intrTarget)
         if (intrTarget.type == "hidespot")
         {
             intrTarget.shake = (20)

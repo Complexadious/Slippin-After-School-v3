@@ -1,10 +1,10 @@
 /// @description Handle Network Requests
 var event_id = async_load[? "id"]
-show_debug_message("obj_multiplayer NETWORK EVENT FIRED!")
+//show_debug_message("obj_multiplayer NETWORK EVENT FIRED!")
 if ((event_id > -1)) { // == network.server.socket) || (event_id == network.server.connection) || (array_contains(struct_get_names(server.clients), event_id))) {
 	var type = async_load[? "type"]
 	var sock = async_load[? "socket"]
-	_log("EVENT ID!!! " + string(event_id))
+//	_log("EVENT ID!!! " + string(event_id))
 	
 	switch type { // handle each type
 		case network_type_connect: {
@@ -30,7 +30,7 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 			break;	
 		}
 		case network_type_data: {
-			_log("Recieved data!!")
+//			_log("Recieved data!!")
 			
 			var _buf = async_load[? "buffer"]
 			multiplayer_handle_packet(sock, _buf)

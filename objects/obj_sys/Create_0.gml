@@ -1,9 +1,3 @@
-show_debug_message("BITS FOR!! " + string(min_num_bit_count(128)))
-
-for (var i = -16; i < 17; i++) {
-	show_debug_message("Bits needed for '" + string(i) + "' is " + string(min_num_bit_count(i)) + " bits")	
-}
-
 // Network data types and data
 var _dto = buffer_custom_datatype_start + 1
 global.data_type = {
@@ -171,8 +165,9 @@ gui_process_struct_value(global.gui_value_struct_ex)
 
 global.keybinds = {
 	"freecamToggle": vk_insert,
-	"commandBarOpen": 191
-	}
+	"commandBarOpenCommand": 191,
+	"commandBarOpenChat": ord("T")
+}
 
 global.camera_hide_ui = 0
 

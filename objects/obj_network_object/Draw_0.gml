@@ -18,28 +18,3 @@ switch network_obj_type {
 	break;
 	}
 }
-
-// draw nametag
-if (nametag != "") {
-	var tx = x;
-	var ty = y;
-
-	var sh = string_height(nametag);
-	var sw = string_width(nametag);
-	var txtpad = 4;
-	var y_offset = -20;
-
-	draw_set_alpha(0.5);
-	draw_set_color(c_black);
-	draw_set_font(fnt_minecraft);
-
-	var x1 = ((tx - (sw / 2)) - txtpad);
-	var x2 = (x1 + (2 * txtpad) + sw);
-	var y1 = (((ty - 400) + y_offset) - txtpad);
-	var y2 = (y1 + (2 * txtpad) + sh);
-	draw_rectangle(x1, y1, x2, y2, 0);
-
-	draw_set_alpha(1);
-	draw_set_color(c_white);
-	draw_text((tx - (sw / 2)), ((ty - sprite_height) + y_offset), nametag);	
-}
