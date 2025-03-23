@@ -20,6 +20,14 @@ if (struct_names_count(global.targetting_cached) > 0) { // decrease or remove ex
 //    server_port = "";
 //    menu_focus = 0;
 //}
+if keyboard_check_pressed(ord("K")) {
+	var _si = struct_get_names(obj_multiplayer.server.clients)
+	for (var i = 0; i < array_length(_si); i++) {
+		var _s = _si[i]
+		show_debug_message("- SOCK TO INST: " + string(sock_to_inst(_s)))	
+	}
+}
+
 if keyboard_check_pressed(vk_f1) {  // reset and redownload all of the shit
 	check_web_asset_references()
 //	show_debug_message("CLEARING CACHE")
@@ -64,7 +72,7 @@ else
 	global.camera_hide_ui = 0	
 
 // command bar handler
-if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || ((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open))) {
+if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || (((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) && !global.command_bar_open) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open))) {
 	keyboard_clear(global.keybinds[$ "commandBarOpenChat"])
 	keyboard_clear(keyboard_key)
 	keyboard_key = 0

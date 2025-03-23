@@ -4,6 +4,7 @@ var event_id = async_load[? "id"]
 if ((event_id > -1)) { // == network.server.socket) || (event_id == network.server.connection) || (array_contains(struct_get_names(server.clients), event_id))) {
 	var type = async_load[? "type"]
 	var sock = async_load[? "socket"]
+	var server_sock = async_load[? "server"]
 //	_log("EVENT ID!!! " + string(event_id))
 	
 	switch type { // handle each type
@@ -24,16 +25,16 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 		case network_type_disconnect: {
 			_log("Client (" + string(sock) + ") disconnected.")
 			
-			var _pid = connected_clients[$ sock]
-			struct_remove(server.clients, sock)
-			struct_remove(timers.server.player_packet_timeouts, _pid)
+			if struct_exists(network.players, string(sock))
+				instance_destroy(sock_to_inst(string(sock)))
+			struct_remove(server.clients, string(sock))
 			break;	
 		}
 		case network_type_data: {
-//			_log("Recieved data!!")
+//			_log("Recieved data!! Sock = " + string(event_id))
 			
 			var _buf = async_load[? "buffer"]
-			multiplayer_handle_packet(sock, _buf)
+			multiplayer_handle_packet(event_id, _buf)
 			break;	
 		}
 		case network_type_non_blocking_connect: {

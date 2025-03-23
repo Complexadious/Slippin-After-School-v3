@@ -183,8 +183,14 @@ network = {
 	timers: {
 //		pkt: {},
 	},
-	client: {},
-	statistics: {}
+//	client: {},
+	statistics: {},
+	network_objects: {
+		// entity_uuid to inst
+	},
+	players: {
+		// sock to entity uuid	
+	}
 }
 
 // Server Data
@@ -196,7 +202,7 @@ server = {
 			globals_to_sync: {} // Global variables to sync from server to client (server overwrites client)
 		},
 		network: {
-			compress_packets: 1
+			compress_packets: 0 // not added
 		}
 	},
 	game: {
@@ -215,7 +221,6 @@ client = {
 	game: {
 		
 	},
-	player: {},
 }
 
 _log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {
@@ -223,7 +228,18 @@ _log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {
 }
 
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
-add_timer("SYNC_PKUN_TMR", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_testfunc, []], 1, 0)
+
+// actual game shit
+// Client
+add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_sb_sync_pkun, []], 1, 0)
+
+// Server
+add_timer("CB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_cb_sync_pkun, []], 1, 0)
+
+
+
+
+
 
 //var tmr = new multiplayer_timer(adjust_to_fps(1), 300, [sys_game_restart, []])
 //var tmr_uuid = generate_uuid4_string()

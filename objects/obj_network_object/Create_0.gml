@@ -15,10 +15,9 @@ posxq = array_create(2)
 posyq = array_create(2)
 dx = 0
 dy = 0
-
 nametag = ""
-
 network_obj_type = "player"
+entity_uuid = generate_uuid4_string()
 
 switch network_obj_type {
 	case "player": {
@@ -52,9 +51,16 @@ switch network_obj_type {
 		immortal = 0
 		username = "USERNAME"
 		nametag = username
+		player_sock = -1
 		break;	
 	}
 	//case "mob": {
 		
 	//}
 }
+
+// save id to network shit
+if is_multiplayer()
+	struct_set(obj_multiplayer.network.network_objects, entity_uuid, id)
+	
+show_debug_message("obj_network_object: CREATED!! uuid: " + entity_uuid)
