@@ -66,6 +66,8 @@ else
 // command bar handler
 if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || ((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open))) {
 	keyboard_clear(global.keybinds[$ "commandBarOpenChat"])
+	keyboard_clear(keyboard_key)
+	keyboard_key = 0
 	toggle_command_bar()
 }
 
@@ -108,11 +110,10 @@ if (global.command_bar_open)
 	}
 	
 	// handle text being typed into bar and cursor move key shit
-
 	if keyboard_check(vk_control) {
 		if keyboard_check_pressed(ord("V"))
 			global.command_bar_content = string_insert(clipboard_get_text(), global.command_bar_content, command_bar_txt_insert_pos)
-	} else if keyboard_check(vk_anykey) {
+	} else if (keyboard_check(vk_anykey)) {
 		if !(keyboard_lastkey == command_bar_last_char) // not pressing same prev key
 			command_bar_hold_key_tmr = 30
 		

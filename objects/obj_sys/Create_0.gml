@@ -188,6 +188,7 @@ command_bar_blinking_cursor_state = 0
 command_bar_curr_text = ""
 command_bar_backspace_tmr = 30
 command_bar_backspace_tmr_timeout = 2
+command_bar_block_key_input = 1
 
 command_bar_last_char = -4
 command_bar_hold_key_tmr = 30

@@ -294,6 +294,7 @@ function cmd_evaluate_args(args_to_eval, types, invalid_code=global.command_bar_
 function toggle_command_bar()
 {
 	global.command_bar_content = ""
+	obj_sys.command_bar_block_key_input = 1
 	obj_sys.command_bar_history_mv_index = -1
 	obj_sys.command_bar_cursor_offset = -1
 	global.command_bar_open = !global.command_bar_open

@@ -151,7 +151,7 @@ function multiplayer_handle_packet(sock, buffer) {
 	
 	if ds_map_exists(global.packet_registry, packet_id) {
 //		show_debug_message("*** PACKET ID IS FOUND IN REGISTRY!!")	
-		pkt = new global.packet_registry[? packet_id]()
+		pkt = new global.packet_registry[? packet_id](sock)
 		pkt.readPacketData(buffer)
 		pkt.processPacket()
 	} else {
@@ -365,8 +365,9 @@ PLAY_PACKET = {
 }
 */
 
-function PLAY_SB_MOVE_PLAYER_POS(X = 0, Y = 0, DIR = 0, TOUCHING_WALL = 0, FLASHLIGHT_ON = 0) constructor {
+function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, Y = 0, DIR = 0, TOUCHING_WALL = 0, FLASHLIGHT_ON = 0) constructor {
 	self.id = 51
+	self.sock = SOCK
 	self.pos = [X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
@@ -384,27 +385,32 @@ function PLAY_SB_MOVE_PLAYER_POS(X = 0, Y = 0, DIR = 0, TOUCHING_WALL = 0, FLASH
 	}
 	processPacket = function() {
 		if !instance_exists(obj_network_object) {
-			instance_create_depth(self.pos[0], self.pos[1], 0, obj_network_object)
+			var no = instance_create_depth(self.pos[0], self.pos[1], 0, obj_network_object)
+			no.sock = self.sock
+			no.network_obj_type = "player"
 		}
 		with (obj_network_object) {
-			network_obj_type = "player"
+			if (sock == other.sock) { // match player
+				show_debug_message("SOCK MATCH: " + string(other.sock))	
+				x -= adjust_to_fps((x - other.pos[0]) / 2);
+				array_push(posxq, other.pos[0]);
+				array_shift(posxq)
 			
-			x -= adjust_to_fps((x - other.pos[0]) / 2);
-			array_push(posxq, other.pos[0]);
-			array_shift(posxq)
+				y -= adjust_to_fps((y - other.pos[1]) / 2);
+				array_push(posyq, other.pos[1]);
+				array_shift(posyq)
 			
-			y -= adjust_to_fps((y - other.pos[1]) / 2);
-			array_push(posyq, other.pos[1]);
-			array_shift(posyq)
+				// make the flashOn an array, so we can cycle the stuff, if indexes arent the same, it changed.
+				array_push(flashOn, other.pos[4]);
+				array_shift(flashOn)
 			
-			// make the flashOn an array, so we can cycle the stuff, if indexes arent the same, it changed.
-			array_push(flashOn, other.pos[4]);
-			array_shift(flashOn)
+				dx = (posxq[1] - posxq[0]) / (60 / (obj_multiplayer.client.settings.game.tick_rate))
+				dy = (posyq[1] - posyq[0]) / (60 / (obj_multiplayer.client.settings.game.tick_rate))
 			
-			dx = (posxq[1] - posxq[0]) / (60 / (obj_multiplayer.client.settings.game.tick_rate))
-			dy = (posyq[1] - posyq[0]) / (60 / (obj_multiplayer.client.settings.game.tick_rate))
-			
-			dir = other.pos[2]
+				dir = other.pos[2]
+			} else {
+				show_debug_message("SOCK MISMATCH, WRONG NETWORK OBJ")	
+			}
 		}
 	}
 }
@@ -416,8 +422,8 @@ function _testfunc() {
 		other.tX = x; other.tY = y; other.tDIR = dir; other.tFO = flashOn
 	}
 	
-	var pkt = new PLAY_SB_MOVE_PLAYER_POS(tX, tY, tDIR, tTW, tFO)
+	var pkt = new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tY, tDIR, tTW, tFO)
 	var pktbuf = pkt.writePacketData()
-	multiplayer_send_packet(struct_get_names(server.clients), pktbuf)
+	multiplayer_send_packet(struct_get_names(network.server.connection), pktbuf)
 	buffer_delete(pktbuf)
 }
