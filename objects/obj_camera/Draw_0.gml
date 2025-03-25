@@ -156,7 +156,7 @@ if instance_exists(p)
 		with (obj_network_object) {
 			if (network_obj_type == "player") {
 				// draw glow when flashlight is on
-				if (flashOn[1] && (!hiding))
+				if (flashOn && (!hiding))
 					draw_sprite_ext_safe(spr_light_2_w, 0, ((x - vx) - (dir * -650)), ((y - vy) - 200), 1, 1, 0, c_white, 0.6)
 		        else
 		            draw_sprite_ext_safe(spr_light_1, 0, (x - vx), ((y - vy) - 200), 1, 1, 0, c_white, 0.5)

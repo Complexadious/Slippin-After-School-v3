@@ -68,6 +68,27 @@ function value_to_datatype(value) {
 		case "int64": {
 			return buffer_s64	
 		}
+		case "ptr": {
+			return buffer_undefined
+		}
+		case "undefined": {
+			return buffer_undefined	
+		}
+		case "null": {
+			return buffer_undefined	
+		}
+		case "method": {
+			return buffer_undefined	
+		}
+		case "struct": {
+			return buffer_undefined	
+		}
+		case "ref": {
+			return buffer_u64
+		}
+		default: {
+			return buffer_undefined	
+		}
 	}
 }
 
@@ -127,20 +148,27 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			return value	
 		}
 		case buffer_position: {
-			// X: 15 bits, Y: 14 bits, DIR: 1 bit, AGAINST_WALL: 1 bit, FLASHLIGHT_ON: 1 bit
+			/*
+			X: 14 bits (16384)
+			DX: 4 bits (16)
+			Y: 13 bits (8192)
+			DIR: 1 bit (1)
+			*/
+			
 			value = int64(buffer_read(buffer_id, BP_BDT))
 			
-			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
-			var _x = logical_rshift(value, total_bits); total_bits -= BP_Y_ALLOCATION
+			var total_bits = BP_DX_ALLOCATION + BP_Y_ALLOCATION + BP_DIR_ALLOCATION
+			var _x = logical_rshift(value, total_bits); total_bits -= BP_DX_ALLOCATION
+			var _dx = (logical_rshift(value, total_bits) & int64(power(2, BP_DX_ALLOCATION) - 1)); total_bits -= BP_Y_ALLOCATION
 			var _y = (logical_rshift(value, total_bits) & int64(power(2, BP_Y_ALLOCATION) - 1)); total_bits -= BP_DIR_ALLOCATION
-			var _dir = (logical_rshift(value, total_bits) & int64(power(2, BP_DIR_ALLOCATION) - 1)); total_bits -= BP_AW_ALLOCATION
-			var _aw = (logical_rshift(value, total_bits) & int64(power(2, BP_AW_ALLOCATION) - 1)); total_bits -= BP_FLASH_ALLOCATION
-			var _flash = (logical_rshift(value, total_bits) & int64(power(2, BP_FLASH_ALLOCATION) - 1));
+			var _dir = (logical_rshift(value, total_bits) & int64(power(2, BP_DIR_ALLOCATION) - 1));
+			//var _aw = (logical_rshift(value, total_bits) & int64(power(2, BP_AW_ALLOCATION) - 1)); total_bits -= BP_FLASH_ALLOCATION
+			//var _flash = (logical_rshift(value, total_bits) & int64(power(2, BP_FLASH_ALLOCATION) - 1));
 			
 			// make _dir 1 or -1
 			if (_dir != 1) _dir = -1;
 			
-			return [_x, _y, _dir, _aw, _flash]
+			return [_x, _dx, _y, _dir]
 		}
 		case buffer_uuid: {
 			var uuid = ""
@@ -232,20 +260,21 @@ function buffer_write_ext(buffer_id, type, value) { //, schema = undefined) {
 		case buffer_position: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.position.id)
 			//make value[2] (dir) either a 1 or a 0
-			if (value[2] > 1) value[2] = 1;
-			if (value[2] < 0) value[2] = 0;
-			//make value[4] (flash) either a 1 or a 0
-			if (value[4] > 1) value[4] = 1;
-			if (value[4] < 0) value[4] = 0;
+			if (value[3] > 1) value[3] = 1;
+			if (value[3] < 0) value[3] = 0;
+//			//make value[4] (flash) either a 1 or a 0
+//			if (value[4] > 1) value[4] = 1;
+//			if (value[4] < 0) value[4] = 0;
 			
 			// X: 15 bits, Y: 14 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
-			var total_bits = BP_Y_ALLOCATION + BP_DIR_ALLOCATION + BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
+			var total_bits = BP_DX_ALLOCATION + BP_Y_ALLOCATION + BP_DIR_ALLOCATION //+ BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
 			var _pos = int64(0)
 			var _x = int64(value[0]); _pos |= _x << (total_bits)
-			var _y = int64(value[1]); total_bits -= BP_Y_ALLOCATION; _pos |= _y << (total_bits)
-			var _dir = int64(value[2]); total_bits -= BP_DIR_ALLOCATION; _pos |= _dir << (total_bits)
-			var _aw = int64(value[3]); total_bits -= BP_AW_ALLOCATION; _pos |= _aw << (total_bits)
-			var _flash = int64(value[4]); total_bits -= BP_FLASH_ALLOCATION; _pos |= _flash << (total_bits)
+			var _dx = int64(value[1]); total_bits -= BP_DX_ALLOCATION; _pos |= _dx << (total_bits)
+			var _y = int64(value[2]); total_bits -= BP_Y_ALLOCATION; _pos |= _y << (total_bits)
+			var _dir = int64(value[3]); total_bits -= BP_DIR_ALLOCATION; _pos |= _dir << (total_bits)
+//			var _aw = int64(value[3]); total_bits -= BP_AW_ALLOCATION; _pos |= _aw << (total_bits)
+//			var _flash = int64(value[4]); total_bits -= BP_FLASH_ALLOCATION; _pos |= _flash << (total_bits)
 			buffer_write(buffer_id, BP_BDT, _pos)
 			break;
 		}
@@ -448,4 +477,20 @@ function uuid_to_binary(uuid) {
 
 function binary_to_uuid(binary) {
 	exit;
+}
+
+/// @function array_without
+/// @param {array} array Array to copy without value
+/// @param {any} value Value to exclude from array (Can be an array of values)
+/// @description Returns copy of provided array without specified value
+function array_without(array, value) {
+	if !is_array(value)
+		value = [value]
+	
+	var _arr = []
+	for (var i = array_length(array) - 1; i >= 0; i--) {
+		if (!array_contains(value, array[i]))
+			array_push(_arr, array[i])
+	}
+	return _arr
 }

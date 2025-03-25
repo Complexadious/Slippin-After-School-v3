@@ -239,7 +239,7 @@ if ((global.transition == 2))
 {
     if ((global.clock_tk_spd != adjust_to_fps(1)))
     {
-        clock_tick()
+		clock_tick()
         if ((global.clock_trans_t > 0))
             global.clock_trans_t-= adjust_to_fps(1)
         else
@@ -501,6 +501,7 @@ if (!global.game_is_over) && !multiplayer_menu_open
         {
             global.menu_mode = 1
             play_se(se_menu, 1)
+			sync_pkun_event()
         }
     }
     else if ((global.menu_mode == 1))

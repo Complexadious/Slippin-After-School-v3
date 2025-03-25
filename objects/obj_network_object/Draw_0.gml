@@ -13,7 +13,7 @@ switch network_obj_type {
 		        draw_sprite_ext_safe(sprite_index, image_index, x, (y + 14), dir, 1, 0, c_white, ((!((ceil((immortal / 8)) % 2))) + 0.5))
 		}
 		
-		if flashOn[1] && !hscene_target && !hiding
+		if flashOn && !hscene_target && !hiding
 			draw_flashlight(self)
 	break;
 	}

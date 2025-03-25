@@ -94,6 +94,7 @@
     {"id":{"name":"obj_network_object","path":"objects/obj_network_object/obj_network_object.yy",},},
     {"id":{"name":"obj_object_shadow","path":"objects/obj_object_shadow/obj_object_shadow.yy",},},
     {"id":{"name":"obj_p_mob","path":"objects/obj_p_mob/obj_p_mob.yy",},},
+    {"id":{"name":"obj_p_syncable","path":"objects/obj_p_syncable/obj_p_syncable.yy",},},
     {"id":{"name":"obj_pianist","path":"objects/obj_pianist/obj_pianist.yy",},},
     {"id":{"name":"obj_pkun_shadow","path":"objects/obj_pkun_shadow/obj_pkun_shadow.yy",},},
     {"id":{"name":"obj_pkun","path":"objects/obj_pkun/obj_pkun.yy",},},

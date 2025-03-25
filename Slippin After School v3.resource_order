@@ -44,6 +44,7 @@
     {"name":"obj_network_object","order":1,"path":"objects/obj_network_object/obj_network_object.yy",},
     {"name":"obj_object_shadow","order":20,"path":"objects/obj_object_shadow/obj_object_shadow.yy",},
     {"name":"obj_p_mob","order":11,"path":"objects/obj_p_mob/obj_p_mob.yy",},
+    {"name":"obj_p_syncable","order":2,"path":"objects/obj_p_syncable/obj_p_syncable.yy",},
     {"name":"obj_pianist","order":12,"path":"objects/obj_pianist/obj_pianist.yy",},
     {"name":"obj_pkun_shadow","order":16,"path":"objects/obj_pkun_shadow/obj_pkun_shadow.yy",},
     {"name":"obj_pkun","order":15,"path":"objects/obj_pkun/obj_pkun.yy",},

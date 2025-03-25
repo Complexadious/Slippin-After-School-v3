@@ -1,3 +1,7 @@
+global.multiplayer_last_sent_pkun_pos = [0, 0, 1]
+global.multiplayer_check_sent_last_pkun_pos = 0 // when we stop moving, send last update packet to make sure other pkun stops moving
+global.skip_clock = 0
+
 // Network data types and data
 var _dto = buffer_custom_datatype_start + 1
 global.data_type = {

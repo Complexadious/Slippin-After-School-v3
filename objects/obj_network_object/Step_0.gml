@@ -2,26 +2,27 @@
 // You can write your code in this editor
 switch network_obj_type {
 	case "player": {
-		x += dx
-		y += dy
+//		show_debug_message("POSXQ = " + string(posxq) + ", DIFF = " + string(posxq[1] - posxq[0]) + ", POSYQ = " + string(posyq) + ", DIFF = " + string(posyq[1] - posyq[0]))
+//		dy = (posyq[1] - posyq[0]) / (60 / (obj_multiplayer.client.settings.game.tick_rate))
 		
-		// adjust flashlight
-		if (flashOn[0] != flashOn[1]) {
-			flashOn[0] = flashOn[1]
-			// change happened
-			play_se(se_flash, 1)
-		}
+		var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true) || noclip
+		if can_move
+			x += dx
+		
+		//y += dy
+		
+//		show_debug_message("DX = " + string(dx) + ", DY = " + string(dy))
 		
 		// guess current sprite based off of speed
 		if (dx == 0) {
 			sprite_index = spr_pkun_idle
-			image_speed = (1/3)
-		} else if (abs(dx) <= 6) {
+			image_speed = adjust_to_fps(1/3)
+		} else if (adjust_to_fps(abs(dx)) <= 6) {
 			sprite_index = spr_pkun_walk
-			image_speed = (1/2)
+			image_speed = adjust_to_fps(1/2)
 		} else {
 			sprite_index = spr_pkun_dash
-			image_speed = (1)
+			image_speed = adjust_to_fps(1)
 		}
 		
 		// obj_pkun shit

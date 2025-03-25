@@ -6,6 +6,7 @@ lifeCur = global.lifeCur
 lifeMax = global.lifeMax
 charmed = global.charmed
 itemSlot = global.itemSlot
+move_speed = 0
 	
 if keyboard_check_pressed(ord("Y")) && global.game_debug
 	instance_create_depth(x, y, depth, obj_hachi)
@@ -124,7 +125,7 @@ if (!game_is_paused())
     {
         if (exhaust && stamina > adjust_to_fps(25))
             exhaust = 0
-        if keyboard_check(vk_shift)
+        if keyboard_check(vk_shift) && (!collision_rectangle(x + (12 * dir), y - 1, x, y + 1, obj_wall, false, true) || noclip)
         {
             if (!exhaust)
                 running = 1
@@ -143,11 +144,20 @@ if (!game_is_paused())
         }
 	if keyboard_check(vk_left) && !global.pkun_frozen
 	{
-	    var move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
+	    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
 	    var can_move = !collision_rectangle(x - move_speed, y - 1, x, y + 1, obj_wall, false, true) || noclip
-    
+	    //show_debug_message("L PKUN MOVE_SPEED = " + string(move_speed))
 	    if (can_move)
-	    {
+	    {	
+			dir = -1
+			
+			// update pkun pos
+			if (last_movement_key != vk_left) || (last_move_speed != move_speed){
+				sync_pkun_event()	// we moved, speed is different
+			}
+//			else
+//				show_debug_message("VK_LEFT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
+			
 	        if (soundDelay > 0)
 	            soundDelay-= adjust_to_fps(1)
 	        else if (check_index(0) || check_index(3)) && !sliding
@@ -203,15 +213,26 @@ if (!game_is_paused())
 	        set_sprite(spr_pkun_idle, (1/3))
 	        image_speed = (1/3)
 	    }
-	    dir = -1
+
+		last_movement_key = vk_left
+//		last_move_speed = move_speed
 	}
 	else if keyboard_check(vk_right) && !global.pkun_frozen
 	{
-	    var move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
+	    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
 	    var can_move = !collision_rectangle(x, y - 1, x + move_speed, y + 1, obj_wall, false, true) || noclip
-    
+		//show_debug_message("R PKUN MOVE_SPEED = " + string(move_speed))
 	    if (can_move)
-	    {
+	    {	
+			dir = 1
+		
+			// update pkun pos
+			if (last_movement_key != vk_right) || (last_move_speed != move_speed){
+				sync_pkun_event()	// we moved, speed is different
+			}			
+//			else
+//				show_debug_message("VK_RIGHT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
+			
 	        if (soundDelay > 0)
 	            soundDelay-= adjust_to_fps(1)
 	        else if (check_index(0) || check_index(3)) && !sliding
@@ -267,14 +288,25 @@ if (!game_is_paused())
 	        set_sprite(spr_pkun_idle, (1/3))
 	        image_speed = (1/3)
 	    }
-	    dir = 1
+		
+		last_movement_key = vk_right
+//		last_move_speed = move_speed
 	}
 	else
+	{
+//		show_debug_message("VK_NONE: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
         set_sprite(spr_pkun_idle, (1/3))
+		if (last_move_speed != move_speed)
+			sync_pkun_event() // stopped moving
+		last_movement_key = -4
+		move_speed = 0
+		last_move_speed = 0
+	}
     if keyboard_check_pressed(ord("F")) && !global.disable_game_keyboard_input
         {
             if (global.flashPow > 0)
                 global.flashOn *= -1
+				sync_flashlight_event()
             play_se(se_flash, 1)
         }
         else if keyboard_check_pressed(vk_alt) && !global.disable_game_keyboard_input
@@ -287,6 +319,7 @@ if (!game_is_paused())
             {
                 if (adjust_to_fps(intrDone) >= adjust_to_fps(intrNeed))
                 {
+					sync_pkun_event()
 //					if is_multiplayer()
 //						send_client_interact_request_packet(intrTarget)
                     intrDone = 0

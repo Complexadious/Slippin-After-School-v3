@@ -27,11 +27,12 @@
 
 // X: 15 bits, Y: 15 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
 #macro BP_BDT buffer_u32
-#macro BP_X_ALLOCATION 15
-#macro BP_Y_ALLOCATION 14
+#macro BP_X_ALLOCATION 14
+#macro BP_DX_ALLOCATION 4
+#macro BP_Y_ALLOCATION 13
 #macro BP_DIR_ALLOCATION 1
-#macro BP_AW_ALLOCATION 1
-#macro BP_FLASH_ALLOCATION 1
+//#macro BP_AW_ALLOCATION 1
+//#macro BP_FLASH_ALLOCATION 1
 
 // settings
 #macro MAX_CLIENTS 5
@@ -198,7 +199,7 @@ server = {
 	clients: {},
 	settings: {
 		game: {
-			tick_rate: 30, // Game tick rate per second
+			tick_rate: 10, // Game tick rate per second
 			globals_to_sync: {} // Global variables to sync from server to client (server overwrites client)
 		},
 		network: {
@@ -208,6 +209,9 @@ server = {
 	game: {
 		mobs: {}
 	},
+	player: {
+		entity_uuid: generate_uuid4_string()	
+	}
 }
 
 // Client Data
@@ -215,7 +219,7 @@ client = {
 	server: {},
 	settings: {
 		game: {
-			tick_rate: 30 // Game tick rate per second
+			tick_rate: 10 // Game tick rate per second
 		},
 	},
 	game: {
@@ -230,12 +234,12 @@ _log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
 
 // actual game shit
-// Client
-add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_sb_sync_pkun, []], 1, 0)
+// client
+add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), 60, [sync_pkun_event, []], 1, 0)
 
 // Server
-add_timer("CB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_cb_sync_pkun, []], 1, 0)
-
+//add_timer("CB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_cb_sync_pkun, []], 1, 0)
+add_timer("CB_MOB_INST_VARS_UPDATE", adjust_to_fps(1), (60 / server.settings.game.tick_rate), [_cb_sync_mobs, []], 1, 0)
 
 
 

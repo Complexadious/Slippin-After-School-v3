@@ -21,26 +21,27 @@ if (struct_names_count(global.targetting_cached) > 0) { // decrease or remove ex
 //    menu_focus = 0;
 //}
 if keyboard_check_pressed(ord("K")) {
-	var _si = struct_get_names(obj_multiplayer.server.clients)
-	for (var i = 0; i < array_length(_si); i++) {
-		var _s = _si[i]
-		show_debug_message("- SOCK TO INST: " + string(sock_to_inst(_s)))	
-	}
+	room_goto(rm_game)
+	global.skip_clock = 1
 }
+
+if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game_keyboard_input
+{
+	// Define the command for the executable
+	var command;
+	//command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
+	command = program_directory + "\\Slippin After School v3.exe\""
+
+	// Execute the program asynchronously
+	var process_id;
+	process_id = ProcessExecuteAsync(command);
+}
+
+if keyboard_check_pressed(ord("J"))
+	_cb_sync_mobs()
 
 if keyboard_check_pressed(vk_f1) {  // reset and redownload all of the shit
 	check_web_asset_references()
-//	show_debug_message("CLEARING CACHE")
-//	global.gui_cached_web_assets = {"asset_sprite": {}, "asset_sound": {}}	
-//	global.web_assets_redownload_timer = 300
-////	forcefully_clear_struct(global.web_downloader_seen_asset_sources)
-//	delete global.web_downloader_seen_asset_sources;
-//	global.web_downloader_seen_asset_sources = {}
-	
-//	var names = struct_get_names(global.web_downloader_seen_asset_sources)
-//	show_debug_message("I FUCKING DELETED IT AND IT HAS THESE NAMES: " + string(names))
-//	forcefully_clear_struct(global.gui_cached_web_assets, {"asset_sprite": {}, "asset_sound": {}})
-//	reload_web_images()
 	if is_multiplayer()
 		close_server()
 	else

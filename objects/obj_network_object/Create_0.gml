@@ -28,7 +28,7 @@ switch network_obj_type {
 		hs_ind = 0
 		hs_spd = 0
 		hs_cum = 0
-		flashOn = [0, 0]
+		flashOn = 1
 		hiding = 0
 		running = 0
 		hscene_target = -4

@@ -10,6 +10,13 @@ lifeMax = global.lifeMax
 charmed = global.charmed
 itemSlot = global.itemSlot
 
+move_speed = 0
+
+last_movement_key = -4
+last_move_speed = 0
+
+entity_uuid = ""
+
 audio_stop_all()
 show_debug_message("CREATING PKUN!!");
 //depth = -3
