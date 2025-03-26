@@ -12,13 +12,17 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
     {
         if ((x < target_x))
         {
-            dir = 1
-            x += adjust_to_fps(7)
+			mob_set_dir(1)
+			mob_move(move * dir, 0)
+            //dir = 1
+            //x += adjust_to_fps(7)
         }
         else
         {
-            dir = -1
-            x -= adjust_to_fps(7)
+			mob_set_dir(-1)
+			mob_move(move * dir, 0)
+            //dir = -1
+            //x -= adjust_to_fps(7)
         }
     }
     if ((state == (2)))
@@ -69,8 +73,9 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
                         ds_list_add(list, id)
                 }
                 to = ds_list_find_value(list, irandom((ds_list_size(list) - 1)))
-                x = to.x
-                y = (560 + (720 * floor((to.y / 720))))
+                //mob_set_x(to.x)
+                //y = (560 + (720 * floor((to.y / 720))))
+				mob_set_pos(to.x, (560 + (720 * floor((to.y / 720)))))
                 ds_list_destroy(list)
                 lifespan = 600
             }
@@ -134,3 +139,5 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
+
+event_inherited()

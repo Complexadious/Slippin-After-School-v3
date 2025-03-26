@@ -13,7 +13,8 @@ timer = 0
 lostTarget = 1
 image_speed = 0
 alp = 1
-
 se_step = se_footslap
-
 actor = 0
+
+move_speed = 8
+move = (can_client_mob_move()) ? move_speed : 0

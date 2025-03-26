@@ -15,3 +15,6 @@ alp = 1
 timer = irandom_range(30, 60)
 yy = 240
 fall_timer = 10
+
+move_speed = 7
+move = (can_client_mob_move()) ? move_speed : 0

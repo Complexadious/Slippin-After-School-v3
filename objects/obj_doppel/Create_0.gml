@@ -15,3 +15,6 @@ image_speed = 0
 spdMax = adjust_to_fps(7)
 spdMin = adjust_to_fps(1)
 spd = adjust_to_fps(1)
+
+move_speed = spd
+move = (can_client_mob_move()) ? move_speed : 0

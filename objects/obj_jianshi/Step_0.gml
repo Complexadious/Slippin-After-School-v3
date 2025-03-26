@@ -13,7 +13,8 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
             image_speed = 1
             if ((image_index >= 5))
             {
-                x += adjust_to_fps(13 * dir)
+                //x += (adjust_to_fps(move) * dir)
+				mob_move(move * dir, 0)
                 sprite_index = spr_jianshi_jump_seal
             }
             else
@@ -27,11 +28,14 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
     else
     {
         if ((image_index >= 5))
-            x += adjust_to_fps(13 * dir)
-        else if ((x < target_x))
-            dir = 1
+           // x += (adjust_to_fps(move) * dir)
+		   mob_move(move * dir, 0)
+        else if ((x < target_x)) && check_is_server()
+            //dir = 1
+			mob_set_dir(1)
         else
-            dir = -1
+            //dir = -1
+			mob_set_dir(-1)
         if ((state == (2)))
         {
             image_speed = 1
@@ -107,3 +111,5 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
+
+event_inherited()

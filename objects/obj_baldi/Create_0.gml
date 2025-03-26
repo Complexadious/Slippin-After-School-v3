@@ -14,3 +14,6 @@ doTrack = 1
 image_speed = 1
 alp = 1
 frozen = 0
+
+move_speed = 4
+move = (can_client_mob_move()) ? move_speed : 0

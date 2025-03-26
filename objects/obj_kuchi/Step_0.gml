@@ -10,13 +10,17 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
     {
         if ((x < target_x))
         {
-            dir = 1
-            x += adjust_to_fps(8)
+			mob_set_dir(1)
+			mob_move(move * dir, 0)
+            //dir = 1
+            //x += adjust_to_fps(8)
         }
         else
         {
-            dir = -1
-            x -= adjust_to_fps(8)
+			mob_set_dir(-1)
+			mob_move(move * dir, 0)
+            //dir = -1
+            //x -= adjust_to_fps(8)
         }
     }
     if ((state == (2)))
@@ -79,3 +83,5 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
 }
 else
     image_speed = 0
+
+event_inherited()

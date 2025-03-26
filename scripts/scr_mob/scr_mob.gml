@@ -1,3 +1,46 @@
+function can_client_mob_move() {
+	if !is_multiplayer()
+		return 1
+	else if check_is_server()
+		return 1
+	return 0
+}
+
+function mob_move(delta_x = 0, delta_y = 0) {
+	if can_client_mob_move() {
+		x += adjust_to_fps(delta_x)
+		last_move_speed = abs(delta_x)
+		if (delta_y != 0)
+			y += adjust_to_fps(delta_y)
+		dx = abs(delta_x)
+	} else {
+		last_move_speed = 0
+	}
+}
+
+function mob_set_pos(new_x, new_y, new_dir = dir) {
+	mob_set_x(new_x)
+	mob_set_y(new_y)
+	mob_set_dir(new_dir)
+}
+
+function mob_set_x(new_x) {
+	if can_client_mob_move() {
+		x = new_x
+	}
+}
+
+function mob_set_y(new_y) {
+	if can_client_mob_move() {
+		y = new_y
+	}
+}
+
+function mob_set_dir(new_dir) {
+	if check_is_server()
+		dir = new_dir
+}
+
 // Require the caller to pass in its current x and y
 function get_closest_target(_x, _y, _id = noone) {
 	// return the stuff within the timers

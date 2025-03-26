@@ -108,3 +108,5 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
+
+event_inherited()

@@ -73,7 +73,7 @@ if (global.show_mob_traces)
 {
 	var prefix = "obj_sys Step: (Rendering Mob Traces) "
 	
-	var variables_to_display = ["object_index", "x", "y", "dir", "state", "trace_x", "trace_y"]
+	var variables_to_display = ["object_index", "x", "y", "dir", "state", "trace_x", "trace_y", "move_speed", "last_move_speed", "dx"]
 	
 	var close_color = c_green
 	var far_color = c_red

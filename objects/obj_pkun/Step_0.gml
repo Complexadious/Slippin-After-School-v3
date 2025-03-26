@@ -12,7 +12,7 @@ if keyboard_check_pressed(ord("Y")) && global.game_debug
 	instance_create_depth(x, y, depth, obj_hachi)
 
 // things that will force pkun to be frozen
-if (global.ui_spectate_list_open) || (obj_camera.freecam) || (obj_camera.camTarget != noone) && (obj_camera.camTarget != obj_pkun) || (global.disable_game_keyboard_input)
+if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || (obj_camera.camTarget != noone) && (obj_camera.camTarget != obj_pkun) || (global.disable_game_keyboard_input)
 	global.pkun_frozen = 1
 else
 	global.pkun_frozen = 0
@@ -466,7 +466,7 @@ if (!game_is_paused())
 }
 else if global.menu_mode
     image_speed = 0
-else if (global.hscene_target != noone)
+if (global.hscene_target != noone)
 {
     if (hiding && global.hscene_target.mob_id != 11)
     {
@@ -480,5 +480,13 @@ else if (global.hscene_target != noone)
             intrTarget = -4
         }
     }
+	
+	show_debug_message("HSCENE UPDATED")
+	var _mob_id = global.hscene_target.mob_id
+	instance_destroy(global.hscene_target)
+	global.hscene_target = {"mob_id": _mob_id}
+	show_debug_message("HSCENE TARGET = " + string(global.hscene_target))
+	
     hscene_animate()
+	immortal = 180
 }

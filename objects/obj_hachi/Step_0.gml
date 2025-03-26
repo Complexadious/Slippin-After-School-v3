@@ -1,5 +1,4 @@
 var current_target = get_closest_target(x, y, id)
-var _is_server = check_is_server()
 
 /// @description Insert description here
 // You can write your code in this editor
@@ -10,8 +9,9 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
         soundDelay-= adjust_to_fps(1)
     if ((state != (0)))
     {
-        dir = ((x < target_x) ? 1 : -1)
-        x += adjust_to_fps(dir * 4)
+        mob_set_dir((x < target_x) ? 1 : -1)
+        //x += (adjust_to_fps(move) * dir)
+		mob_move(move * dir, 0)
         if ((warpDelay > 0))
         {
             if ((alp < 1))
@@ -23,7 +23,8 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
         else if ((abs((target_x - x)) >= 350))
         {
             warpDelay = 300
-            x += adjust_to_fps(dir * 350)
+            //x += (adjust_to_fps(350) * dir)
+			mob_move(350 * dir, 0)
             mob_play_ds(se_warp)
         }
     }
@@ -71,7 +72,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
                 state = (0)
             }
         }
-        else if ((state == (0))) && _is_server
+        else if ((state == (0)))// && check_is_server()
         {
             set_sprite(spr_hachi_idle, (1/3))
             if ((timer > 0))
@@ -97,3 +98,5 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
 }
 else
     image_speed = 0
+
+event_inherited()

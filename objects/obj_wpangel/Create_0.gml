@@ -15,3 +15,8 @@ image_speed = 0
 stop = 0
 heartRate = 0
 heartTimer = 0
+
+move_speed = 6
+
+move = (can_client_mob_move()) ? move_speed : 0
+//move = (can_client_mob_move())

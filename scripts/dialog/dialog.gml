@@ -1,6 +1,6 @@
 function game_is_paused() //gml_Script_game_is_paused
 {
-    return (global.menu_mode || global.dialog_mode || (global.hscene_target != -4) || global.setting_mode || global.transition || global.game_is_over);
+    return (global.menu_mode || global.dialog_mode || (global.hscene_target != -4) || global.setting_mode || global.transition || global.game_is_over) && !is_multiplayer();
 }
 
 function game_ring_bell(argument0) //gml_Script_game_ring_bell

@@ -1,6 +1,5 @@
 function hscene_animate() //gml_Script_hscene_animate
 {
-	//instance_destroy(global.hscene_target)
 	if !global.enable_nsfw
 	{
 		hscene_cum()

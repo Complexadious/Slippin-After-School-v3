@@ -11,6 +11,8 @@ if (struct_names_count(global.targetting_cached) > 0) { // decrease or remove ex
 	}
 }
 
+//show_debug_message("CAN MOB MOVE: " + string(can_client_mob_move()))
+
 //show_debug_message("targetting timers = " + string(global.targetting_cached))
 // Toggle multiplayer menu with Y
 //if (keyboard_check_pressed(ord("Y")) && room == rm_title) {
@@ -38,7 +40,7 @@ if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game
 }
 
 if keyboard_check_pressed(ord("J"))
-	_cb_sync_mobs()
+	_cb_destroy_object(obj_p_mob)
 
 if keyboard_check_pressed(vk_f1) {  // reset and redownload all of the shit
 	check_web_asset_references()

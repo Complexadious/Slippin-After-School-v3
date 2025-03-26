@@ -239,7 +239,7 @@ add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), 60, [sync_pkun_event, []], 
 
 // Server
 //add_timer("CB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_cb_sync_pkun, []], 1, 0)
-add_timer("CB_MOB_INST_VARS_UPDATE", adjust_to_fps(1), (60 / server.settings.game.tick_rate), [_cb_sync_mobs, []], 1, 0)
+//add_timer("CB_MOB_INST_VARS_UPDATE", adjust_to_fps(1), (60 / server.settings.game.tick_rate), [_cb_sync_mobs, []], 1, 0)
 
 
 
