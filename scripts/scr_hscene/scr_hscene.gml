@@ -1,16 +1,20 @@
-function hscene_animate() //gml_Script_hscene_animate
+function hscene_animate(affect_client = 1) //gml_Script_hscene_animate
 {
-	if !global.enable_nsfw
+	if (!global.enable_nsfw) && (affect_client)
 	{
-		hscene_cum()
-		hscene_end()
+		hscene_cum(affect_client)
+		hscene_end(affect_client)
 		return;
 	}
+	
+//	if (object_index == obj_pkun) {
+//		_cb_sync_hscene()	
+//	}
 
     image_speed = 0
     if ((hs_snd_delay > 0))
         hs_snd_delay--
-    if ((global.hscene_target.mob_id == 1))
+    if ((hs_mob_id == 1))
     {
         if ((hs_stp == 0))
         {
@@ -34,7 +38,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 4))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_wpangel_hs_cum, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -42,9 +46,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 2))
+    else if ((hs_mob_id == 2))
     {
         if ((hs_stp == 0))
         {
@@ -58,7 +62,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_ladypaint_hs_cum, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -66,9 +70,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 3))
+    else if ((hs_mob_id == 3))
     {
         if ((hs_stp == 0))
         {
@@ -82,7 +86,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_kuchi_h_a_cum, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -90,9 +94,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 4))
+    else if ((hs_mob_id == 4))
     {
         if ((hs_stp == 0))
         {
@@ -106,7 +110,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_jianshi_hs_cum, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -114,9 +118,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 5))
+    else if ((hs_mob_id == 5))
     {
         if ((hs_stp == 0))
         {
@@ -135,7 +139,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 3))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_police_hs_a_cum, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -143,9 +147,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 6))
+    else if ((hs_mob_id == 6))
     {
         if ((hs_stp == 0))
         {
@@ -165,7 +169,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 3))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_doppel_c1, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -173,9 +177,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 7))
+    else if ((hs_mob_id == 7))
     {
         if ((hs_stp == 0))
         {
@@ -189,7 +193,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_pianist_h_c, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -197,9 +201,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 8))
+    else if ((hs_mob_id == 8))
     {
         if ((hs_stp == 0))
         {
@@ -213,7 +217,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_mary_c, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -221,9 +225,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 9))
+    else if ((hs_mob_id == 9))
     {
         if ((hs_stp == 0))
         {
@@ -237,7 +241,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_hachi_c2, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -245,9 +249,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 10))
+    else if ((hs_mob_id == 10))
     {
         if ((hs_stp == 0))
             hscene_play(spr_hanako_hs_a, 0, 0)
@@ -270,9 +274,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 11))
+    else if ((hs_mob_id == 11))
     {
         if ((hs_stp == 0))
         {
@@ -286,7 +290,7 @@ function hscene_animate() //gml_Script_hscene_animate
         }
         else if ((hs_stp == 2))
         {
-            hscene_cum()
+            hscene_cum(affect_client)
             hscene_play_ext(spr_hanako_hs_b_c, 0.16666666666666666, 0, 100)
             hscene_snd_at(rand_hse("cum", 1), 1, 4)
             hscene_snd_at(rand_hse("cum", 1), 1, 8)
@@ -294,9 +298,9 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 21)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
-    else if ((global.hscene_target.mob_id == 12))
+    else if ((hs_mob_id == 12))
     {
         if ((hs_stp == 0))
         {
@@ -335,15 +339,16 @@ function hscene_animate() //gml_Script_hscene_animate
             hscene_snd_at(rand_hse("cum", 0), 1, 26)
         }
         else
-            hscene_end()
+            hscene_end(affect_client)
     }
     else
-        hscene_end()
+        hscene_end(affect_client)
     if ((!global.dialog_mode) && keyboard_check_pressed(vk_return))
     {
         hs_stp++
         hs_lp = -1
         hs_snd_delay = 0
+		_cb_sync_hscene()
     }
 }
 
@@ -427,8 +432,11 @@ function hscene_snd_at(argument0, argument1, argument2) //gml_Script_hscene_snd_
     }
 }
 
-function hscene_end() //gml_Script_hscene_end
+function hscene_end(affect_client = 1) //gml_Script_hscene_end
 {
+	if !affect_client
+		exit;
+	
     if (!global.game_is_over)
     {
         global.hscene_target = -4
@@ -462,11 +470,12 @@ function hscene_end() //gml_Script_hscene_end
         }
         mobSpawnCt = (irandom_range(400, 600) * (1 - ((0.4 * global.clock_tk) / 360)))
     }
+	_cb_sync_hscene()
 }
 
-function hscene_cum() //gml_Script_hscene_cum
-{
-    if ((room == rm_game) && (!hs_cum))
+function hscene_cum(affect_client = 1) //gml_Script_hscene_cum
+{	
+    if ((room == rm_game) && (!hs_cum)) && affect_client
     {
         hs_cum = 1
         global.charmed = 0
@@ -476,5 +485,6 @@ function hscene_cum() //gml_Script_hscene_cum
         if ((global.lifeCur <= 0))
             global.game_is_over = 1
     }
+	_cb_sync_hscene()
 }
 

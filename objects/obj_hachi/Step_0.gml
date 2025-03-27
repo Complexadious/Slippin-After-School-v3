@@ -90,7 +90,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
         if (((state == (2)) && place_meeting(x, y, current_target) && (!current_target.immortal) && (!lostTarget)) || (global.charmed >= 100)) && current_target.object_index == obj_pkun
         {
             play_se(se_charmed, 1)
-            global.hscene_target = self
+            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
             global.trans_alp = 1
             global.hscene_hide_fl = 1
         }

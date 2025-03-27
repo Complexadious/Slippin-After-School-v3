@@ -75,7 +75,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
         if (!lostTarget) && current_target.object_index == obj_pkun
         {
             play_se(se_catch, 1)
-            global.hscene_target = self
+            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
             global.trans_alp = 1
             global.hscene_hide_fl = 1
         }

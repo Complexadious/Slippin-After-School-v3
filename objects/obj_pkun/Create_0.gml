@@ -2,6 +2,8 @@
 // You can write your code in this editor
 
 // multiplayer stuff
+__cache = {}
+
 flashOn = global.flashOn
 hscene_target = global.hscene_target
 pressing_interact = keyboard_check(vk_return)
@@ -40,6 +42,7 @@ image_speed = adjust_to_fps(0.25)
 dir = 1
 soundDelay = 0
 global.hscene_target = -4
+
 hs_stp = 0
 hs_spr = -4
 hs_ind = 0
@@ -51,6 +54,10 @@ hs_snd_prev = -4
 hs_snd_efct = -1
 hs_trans = 0
 hs_cum = 0
+
+hs_hide_fl = 0
+hs_mob_id = 0
+
 immortal = 0
 global.trans_spd = adjust_to_fps(0.05)
 running = 0

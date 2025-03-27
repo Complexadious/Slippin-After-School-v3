@@ -38,35 +38,11 @@ switch network_obj_type {
 	            play_se(se_creak[_i], (0.3 + 0.2 * running))
 	    }
 		
-		if (hscene_target != -4) && (instance_exists(hscene_target))
-			instance_destroy(hscene_target)
+		if (hs_mob_id > 0)
+			hscene_animate(0)
+			//instance_destroy(hscene_target)
 		
 		var _intrTarget = instance_nearest(x, y, obj_interactable)
-		//show_debug_message("NETWORK OBJ LIFECUR = " + string(lifeCur) + ", LIFEMAX = " + string(lifeMax))
-		//if (_intrTarget != noone) && pressing_interact {
-		//	if ((intrDone) >= (intrNeed)) {
-		//		intrDone = 0
-		//		show_debug_message("INTERACTED!!!!")
-		//		if (_intrTarget.type == "hidespot") && (!hiding) {
-		//			with _intrTarget {
-		//				shake = 20
-		//				locked = 1
-		//				play_se(se_in, 1)
-		//			}
-		//			hiding = 1
-				
-		//		} else if (_intrTarget.type == "hidespot") {
-		//			with _intrTarget {
-		//				shake = 20
-		//				locked = 0
-		//				play_se(se_out, 1)
-		//			}
-		//			hiding = 0
-		//		}
-		//	}
-		//}
-		//else
-		//	intrDone = 0
 	break;
 	}
 }

@@ -49,7 +49,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop))
         {
             play_se(se_catch, 1)
             play_se(se_whistle_caught, 1)
-            global.hscene_target = self
+            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
             global.trans_alp = 1
         }
     }

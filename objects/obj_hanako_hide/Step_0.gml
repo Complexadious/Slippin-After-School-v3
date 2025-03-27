@@ -52,7 +52,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
     if ((hide_ban <= 0) || (current_target.hiding && (pit == hide_spot))) && !current_target.immortal && current_target.object_index == obj_pkun
     {
         play_se(se_catch, 1)
-        global.hscene_target = self
+        global.hscene_target = self; if check_is_server() _cb_sync_hscene();
         global.hscene_hide_fl = 1
         global.trans_alp = 1
     }

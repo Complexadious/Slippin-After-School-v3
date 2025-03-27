@@ -141,6 +141,7 @@ function multiplayer_send_packet(sockets, buffer) {
 	if !is_array(sockets) sockets = [sockets]
 	for (var i = 0; i < array_length(sockets); i++) {
 		network_send_packet(real(sockets[i]), buffer, buffer_get_size(buffer))
+		global.multiplayer_packets_sent++
 //		show_debug_message("multiplayer_send_packet: Sent packet out! (" + string(sockets[i]) + ")")
 	}
 }
@@ -228,6 +229,15 @@ function player_count() {
 	else if is_multiplayer()
 		return struct_names_count(obj_multiplayer.network.network_objects)
 	return 0
+}
+
+function entity(UUID, X, DX, Y, DIR, OBJECT_INDEX) constructor {
+	entity_uuid = UUID
+	x = X
+	dx = DX
+	y = Y
+	dir = DIR
+	object_index = OBJECT_INDEX
 }
 
 //function player(SOCK, USERNAME) constructor {
@@ -536,8 +546,10 @@ function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0) const
 		if is_undefined(sock_to_inst(self.sock)) {
 			var no = instance_create_depth(self.pos[0], self.pos[2], 0, obj_network_object)
 			no.network_obj_type = "player"
+			no.entity_uuid = generate_uuid4_string()
 			struct_set(obj_multiplayer.network.players, self.sock, no.entity_uuid)
-			no.nametag = self.sock
+			struct_set(obj_multiplayer.network.network_objects, no.entity_uuid, no.id)
+			no.nametag = no.entity_uuid // self.sock
 		}
 		
 		// adjust server version of pkun
@@ -559,10 +571,10 @@ function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0) const
 			dx = (other.pos[1] * dir)
 			
 			// replicate update to all client version of source pkuns whatever
-			if (player_count() > 2) { // only need to replicate changes to other clients if its more than server and 1 client.
+//			if (player_count() > 2) { // only need to replicate changes to other clients if its more than server and 1 client.
 				show_debug_message("PLAY_SB_MOVE_PLAYER_POS: Replicating client changes to other clients! (no.entity_uuid = " + string(entity_uuid) + ")")
 				_cb_sync_pkun(entity_uuid, other.pos[0], other.pos[1], other.pos[2], other.pos[3], other.sock)
-			}
+//			}
 		}
 	}
 }
@@ -593,11 +605,13 @@ function PLAY_CB_MOVE_PLAYER_POS(ENTITY_UUID = "", X = 0, DX = 0, Y = 0, DIR = 0
 		}
 		
 		if (entity_uuid_to_inst(self.uuid) == noone) {
+			show_debug_message("PLAY_CB_MOVE_PLAYER_POS: Creating new obj_network_obj with uuid " + string(self.uuid))
 			var no = instance_create_depth(self.pos[0], self.pos[2], 0, obj_network_object)
 			no.network_obj_type = "player"
 			no.entity_uuid = self.uuid
-//			struct_set(obj_multiplayer.network.players, self.sock, no.entity_uuid)
-			no.nametag = self.uuid
+			struct_set(obj_multiplayer.network.network_objects, self.uuid, no.id)
+			no.nametag = self.uuid // self.sock
+			show_debug_message("PLAY_CB_MOVE_PLAYER_POS: echo uuid " + string(self.uuid) + " = " + string(no.entity_uuid))
 		}
 		
 		// adjust client version of pkun
@@ -670,6 +684,7 @@ function PLAY_CB_CREATE_ENTITY(ENTITY_UUID = "", X = 0, DX = 0, Y = 0, DIR = 0, 
 	self.uuid = ENTITY_UUID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.object_index = OBJECT_INDEX
+	show_debug_message("PLAY_CB_CREATE_ENTITY: pos = " + string(self.pos))
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -705,14 +720,52 @@ function PLAY_CB_CREATE_ENTITY(ENTITY_UUID = "", X = 0, DX = 0, Y = 0, DIR = 0, 
 			var inst = instance_create_depth(self.pos[0], self.pos[2], -3, self.object_index)
 			inst.entity_uuid = self.uuid
 			inst.dir = self.pos[3]
-			struct_set(obj_multiplayer.network.network_objects, inst.entity_uuid, inst.id)
+			struct_set(obj_multiplayer.network.network_objects, self.uuid, inst.id)
+			show_debug_message("PLAY_CB_CREATE_ENTITY: echo uuid " + string(self.uuid) + " = " + string(inst.entity_uuid))
 		}
 	}
 }
 ds_map_add(global.packet_registry, 54, PLAY_CB_CREATE_ENTITY)
 
-function PLAY_CB_DESTROY_ENTITY(ENTITY_UUID = "") constructor {
+function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
 	self.id = 55
+	self.entities = ENTITIES // [UUID, X, DX, Y, DIR, OBJ_INDEX]
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.entities = buffer_read_ext(buf)
+		show_debug_message("PLAY_CB_CREATE_ENTITIES: Read, Entities: " + string(self.entities))
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_array, self.entities)
+		return buf
+	}
+	processPacket = function() {
+		if (array_length(self.entities) <= 0) {
+			show_debug_message("PLAY_CB_CREATE_ENTITIES: Couldn't create entity with empty entities array!")
+			exit;
+		}
+		
+		for (var i = 0; i < array_length(self.entities); i++) {
+			var _e = self.entities[i]
+			show_debug_message("PLAY_CB_CREATE_ENTITIES: Applying entity: " + string(_e))	
+			
+			if (array_length(_e) < 6) {
+				show_debug_message("PLAY_CB_CREATE_ENTITIES: Couldnt create entity, entity_array doesn't have enough indexes.")	
+			}
+				
+			var _temp_packet = new PLAY_CB_CREATE_ENTITY(_e[0], _e[1], _e[2], _e[3], _e[4], _e[5])
+			_temp_packet.processPacket()
+		}
+	}
+}
+ds_map_add(global.packet_registry, 55, PLAY_CB_CREATE_ENTITIES)
+
+function PLAY_CB_DESTROY_ENTITY(ENTITY_UUID = "") constructor {
+	self.id = 56
 	self.uuid = ENTITY_UUID
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
@@ -738,10 +791,10 @@ function PLAY_CB_DESTROY_ENTITY(ENTITY_UUID = "") constructor {
 		}
 	}
 }
-ds_map_add(global.packet_registry, 55, PLAY_CB_DESTROY_ENTITY)
+ds_map_add(global.packet_registry, 56, PLAY_CB_DESTROY_ENTITY)
 
 function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
-	self.id = 56
+	self.id = 57
 	self.object_index = OBJECT_INDEX
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
@@ -767,7 +820,7 @@ function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
 		show_debug_message("PLAY_CB_DESTROY_OBJECT: Destroyed all instances of " + string(object_get_name(self.object_index)))
 	}
 }
-ds_map_add(global.packet_registry, 56, PLAY_CB_DESTROY_OBJECT)
+ds_map_add(global.packet_registry, 57, PLAY_CB_DESTROY_OBJECT)
 
 //function PLAY_CB_UPDATE_ENTITY_VAR(ENTITY_UUID = "", VAR_AND_VAL_ARRAY = [], OBJECT_INDEX = -4) constructor {
 //	self.id = 54
@@ -826,7 +879,7 @@ ds_map_add(global.packet_registry, 56, PLAY_CB_DESTROY_OBJECT)
 //ds_map_add(global.packet_registry, 54, PLAY_CB_UPDATE_ENTITY_VAR)
 
 function PLAY_SB_TOGGLE_FLASHLIGHT(SOCK = -1, FLASH = 0) constructor {
-	self.id = 57
+	self.id = 58
 	self.sock = SOCK
 	self.flash = FLASH
 	readPacketData = function(buf) {
@@ -854,10 +907,10 @@ function PLAY_SB_TOGGLE_FLASHLIGHT(SOCK = -1, FLASH = 0) constructor {
 		}
 	}
 }
-ds_map_add(global.packet_registry, 57, PLAY_SB_TOGGLE_FLASHLIGHT)
+ds_map_add(global.packet_registry, 58, PLAY_SB_TOGGLE_FLASHLIGHT)
 
 function PLAY_CB_TOGGLE_FLASHLIGHT(UUID = "", FLASH = 0) constructor {
-	self.id = 58
+	self.id = 59
 	self.uuid = UUID
 	self.flash = FLASH
 	readPacketData = function(buf) {
@@ -882,22 +935,85 @@ function PLAY_CB_TOGGLE_FLASHLIGHT(UUID = "", FLASH = 0) constructor {
 		}
 	}
 }
-ds_map_add(global.packet_registry, 58, PLAY_CB_TOGGLE_FLASHLIGHT)
+ds_map_add(global.packet_registry, 59, PLAY_CB_TOGGLE_FLASHLIGHT)
+
+function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HIDE_FL, HS_STP) constructor {
+	self.id = 60
+	self.sock = SOCK
+	self.mob_id = MOB_ID
+	self.hide_fl = HIDE_FL
+	self.hs_stp = HS_STP
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.mob_id = buffer_read_ext(buf)
+		self.hide_flash = buffer_read_ext(buf)
+		self.hs_stp = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_vint, self.mob_id)
+		buffer_write_ext(buf, buffer_bool, self.hide_fl)
+		buffer_write_ext(buf, buffer_vint, self.hs_stp)
+		return buf
+	}
+	processPacket = function() {
+		// adjust server version of object
+		with (sock_to_inst(self.sock)) {
+			hs_mob_id = other.mob_id
+			hs_hide_fl = other.hide_fl
+			hs_stp = other.hs_stp
+		}
+	}
+}
+ds_map_add(global.packet_registry, 60, PLAY_SB_SET_HSCENE)
+
+function PLAY_CB_SET_HSCENE(ENTITY_UUID, MOB_ID, HIDE_FL, HS_STP) constructor {
+	self.id = 61
+	self.uuid = ENTITY_UUID
+	self.mob_id = MOB_ID
+	self.hide_fl = HIDE_FL
+	self.hs_stp = HS_STP
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.uuid = buffer_read_ext(buf)
+		self.mob_id = buffer_read_ext(buf)
+		self.hide_flash = buffer_read_ext(buf)
+		self.hs_stp = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_uuid, self.uuid)
+		buffer_write_ext(buf, buffer_vint, self.mob_id)
+		buffer_write_ext(buf, buffer_bool, self.hide_fl)
+		buffer_write_ext(buf, buffer_vint, self.hs_stp)
+		return buf
+	}
+	processPacket = function() {
+		// adjust client version of object
+		show_debug_message("ADJUSTING HSCENE FOR UUID " + string(self.uuid))
+		with (entity_uuid_to_inst(self.uuid)) {
+			hs_mob_id = other.mob_id
+			hs_hide_fl = other.hide_fl
+			hs_stp = other.hs_stp
+		}
+	}
+}
+ds_map_add(global.packet_registry, 61, PLAY_CB_SET_HSCENE)
+
+
+
 
 /// @function do_packet
 /// @description Constructs and sends a packet. Argument1 is packet_id, rest of arguments are packet data (packet args for packet constructor)
-function do_packet() {
-	if (argument_count < 1)
-		exit; // no id or nun
-	
-	if !ds_map_exists(global.packet_registry, packet_id)
-		exit; // packet dont exist
-	
-	var _pktc = global.packet_registry[? packet_id]
-	
-	var pkt = new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tDX, tY, tDIR) //, tTW, tFO)
+function do_packet(pkt, target_socks) {
 	var pktbuf = pkt.writePacketData()
-	multiplayer_send_packet(network.server.connection, pktbuf)
+	multiplayer_send_packet(target_socks, pktbuf)
 	buffer_delete(pktbuf)
 }
 
@@ -920,7 +1036,7 @@ function sync_pkun_event() {
 	var tDX = (global.menu_mode = 1) ? 0 : obj_pkun.move_speed
 	var tY = obj_pkun.y
 	var tDIR = obj_pkun.dir
-	var last_pos = global.multiplayer_last_sent_pkun_pos
+	var last_pos = global.multiplayer_pkun_sync_hist
 	
 	if (last_pos[0] == tX) && (last_pos[1] == tY) && (last_pos[2] == tDIR) {
 		if global.multiplayer_check_sent_last_pkun_pos { // we did do the last update
@@ -934,13 +1050,14 @@ function sync_pkun_event() {
 		global.multiplayer_check_sent_last_pkun_pos = 0 // pos changed	
 	}
 	
-	global.multiplayer_last_sent_pkun_pos = [tX, tY, tDIR]
-//	show_debug_message("DID PKUN UPDATE, LAST SENT PKUN POS = " + string(global.multiplayer_last_sent_pkun_pos))
+	global.multiplayer_pkun_sync_hist = [tX, tY, tDIR]
+//	show_debug_message("DID PKUN UPDATE, LAST SENT PKUN POS = " + string(global.multiplayer_pkun_sync_hist))
 	
-	var pkt = new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tDX, tY, tDIR) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
-	multiplayer_send_packet(obj_multiplayer.network.server.connection, pktbuf)
-	buffer_delete(pktbuf)
+	//var pkt = new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tDX, tY, tDIR) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
+	//multiplayer_send_packet(obj_multiplayer.network.server.connection, pktbuf)
+	//buffer_delete(pktbuf)
+	do_packet(new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tDX, tY, tDIR), obj_multiplayer.network.server.connection) //, tTW, tFO)
 	
 	obj_pkun.last_move_speed = obj_pkun.move_speed
 	__log("Sent Pkun Sync Packet")
@@ -955,7 +1072,7 @@ function sync_pkun_event() {
 /// @param {number} src_sock Source sock
 /// @description Sends pkun sync packet to all clients. Leave params blank and it will send server's own pkun update packet.
 function _cb_sync_pkun(uuid = "", tx = -4, tdx = -4, ty = -4, tdir = -4, src_sock = -1) {
-//	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/_cb_sync_pkun")}
+	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/_cb_sync_pkun")}
 	if (!check_is_server() || !instance_exists(obj_pkun) || room = rm_intro || room = rm_title) {
 		exit; // only run as server and if we have moved
 	}
@@ -967,7 +1084,7 @@ function _cb_sync_pkun(uuid = "", tx = -4, tdx = -4, ty = -4, tdir = -4, src_soc
 	var tDX = provided_uuid ? tdx : obj_pkun.move_speed
 	var tY = provided_uuid ? ty : obj_pkun.y
 	var tDIR = provided_uuid ? tdir : obj_pkun.dir
-	var last_pos = global.multiplayer_last_sent_pkun_pos
+	var last_pos = global.multiplayer_pkun_sync_hist
 	
 	if (!provided_uuid) {
 		if (last_pos[0] == tX) && (last_pos[1] == tY) && (last_pos[2] == tDIR) {
@@ -981,19 +1098,24 @@ function _cb_sync_pkun(uuid = "", tx = -4, tdx = -4, ty = -4, tdir = -4, src_soc
 		} else {
 			global.multiplayer_check_sent_last_pkun_pos = 0 // pos changed	
 		}
-		global.multiplayer_last_sent_pkun_pos = [tX, tY, tDIR]
+		global.multiplayer_pkun_sync_hist[0] = tX
+		global.multiplayer_pkun_sync_hist[1] = tY
+		global.multiplayer_pkun_sync_hist[2] = tDIR
+		
 		obj_pkun.last_move_speed = obj_pkun.move_speed
 	}
 	
-//	show_debug_message("DID PKUN UPDATE, LAST SENT PKUN POS = " + string(global.multiplayer_last_sent_pkun_pos))
-	var pkt = new PLAY_CB_MOVE_PLAYER_POS(entityUUID, tX, tDX, tY, tDIR) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
-	var target_socks = array_without(struct_get_names(obj_multiplayer.network.players), src_sock)
+//	show_debug_message("DID PKUN UPDATE, LAST SENT PKUN POS = " + string(global.multiplayer_pkun_sync_hist))
+	//var pkt = new PLAY_CB_MOVE_PLAYER_POS(entityUUID, tX, tDX, tY, tDIR) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
+	//var target_socks = array_without(struct_get_names(obj_multiplayer.network.players), src_sock)
+	var target_socks = array_without(struct_get_names(obj_multiplayer.server.clients), src_sock)
+	do_packet(new PLAY_CB_MOVE_PLAYER_POS(entityUUID, tX, tDX, tY, tDIR), target_socks) //, tTW, tFO)
 	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
 
-//	__log("Sent Server to Client Pkun Sync Packet")
+	__log("Sent Server to Client Pkun Sync Packet (" + string(src_sock) + " -> " + string(target_socks) + ")")
 }
 
 function sync_flashlight_event() {
@@ -1006,10 +1128,11 @@ function sync_flashlight_event() {
 		exit; // only run as client
 	}
 		
-	var pkt = new PLAY_SB_TOGGLE_FLASHLIGHT(-1, global.flashOn) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
-	multiplayer_send_packet(obj_multiplayer.network.server.connection, pktbuf)
-	buffer_delete(pktbuf)
+	//var pkt = new PLAY_SB_TOGGLE_FLASHLIGHT(-1, global.flashOn) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
+	//multiplayer_send_packet(obj_multiplayer.network.server.connection, pktbuf)
+	//buffer_delete(pktbuf)
+	do_packet(new PLAY_SB_TOGGLE_FLASHLIGHT(-1, global.flashOn), obj_multiplayer.network.server.connection)
 }
 
 function _cb_sync_flashlight(source_sock_or_uuid, flash) {
@@ -1019,12 +1142,12 @@ function _cb_sync_flashlight(source_sock_or_uuid, flash) {
 
 	source_sock_or_uuid = string(source_sock_or_uuid)
 	var uuid = (string_length(source_sock_or_uuid) == 36) ? source_sock_or_uuid : obj_multiplayer.network.players[$ source_sock_or_uuid]
-	var pkt = new PLAY_CB_TOGGLE_FLASHLIGHT(uuid, flash) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
+	//var pkt = new PLAY_CB_TOGGLE_FLASHLIGHT(uuid, flash) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
 	var target_socks = array_without(struct_get_names(obj_multiplayer.network.players), source_sock_or_uuid)
-	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	do_packet(new PLAY_CB_TOGGLE_FLASHLIGHT(uuid, flash), target_socks)
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
 }
 
 function _cb_sync_mobs() {
@@ -1092,26 +1215,61 @@ function _cb_sync_mob() {
 	struct_set(global.multiplayer_entity_sync_hist, entity_uuid, [x, dx, y, dir, state, check])	
 	self.last_move_speed = self.move_speed
 	
-	var pkt = new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, state, object_index) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
+	//var pkt = new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, state, object_index) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
 	var target_socks = struct_get_names(obj_multiplayer.network.players)
-	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, state, object_index), target_socks)
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
 	_pcnt++
-//	}
-//	__log("Sent Server to Client Pkun Sync Packet")
+}
 
-	//with (obj_p_syncable) {
-	//	if (diff_vars_and_vals != []) {
-	//		show_debug_message("INSIDE MOB: " + string(object_get_name(object_index)) + ", diff = " + string(diff_vars_and_vals))
-	//		var pkt = new PLAY_CB_UPDATE_ENTITY_VAR(entity_uuid, diff_vars_and_vals, object_index) //, tTW, tFO)
-	//		var pktbuf = pkt.writePacketData()
+function _cb_sync_hscene() {
+//	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/_cb_sync_mob")}
+	if (!check_is_server() || room = rm_intro || room = rm_title) {
+//		show_debug_message("CB_SYNC_MOB SKIPPED, NOT SERVER OR IN WRONG ROOM.")
+		exit; // only run as server and not in title or anything
+	}
 	
-	//		multiplayer_send_packet(obj_multiplayer.network.players, pktbuf)
-	//		buffer_delete(pktbuf)
-	//	}
-	//}
+	var hist = global.multiplayer_pkun_sync_hist
+	
+	// X, Y, DIR, HSCENE_TARGET, HS_HIDE_FL, HS_STP, HS_CHECK
+//	show_debug_message("_cb_sync_hscene INSIDE INSTANCE " + string(id))
+	var last_hscene_target = hist[3]
+	var last_hscene_hide_fl = hist[4]
+	var last_hscene_stp = hist[5]
+	var hscene_check = hist[6]
+	
+	var msg = ""
+	
+	// x doesnt matter here since we apply dx and stuff, we will sync x on packet updates regardless
+	if (last_hscene_target == global.hscene_target) && (last_hscene_hide_fl == global.hscene_hide_fl) && (last_hscene_stp == obj_pkun.hs_stp) {
+		if !(last_hscene_target == state)
+			msg+= "\Hscene Target Changed"
+		if !(last_hscene_hide_fl == y)
+			msg+= "\nHscene Hide FL Changed"
+		if !(last_hscene_stp == dir)
+			msg+= "\nHscene Stp Changed"
+			
+		show_debug_message("_cb_sync_hscene (server), differences:" + msg)
+		
+		if hscene_check { // we did do the last update
+			show_debug_message("SKIPPING HSCENE UPDATE, ALREADY SENT LAST UPDATE PACKET")
+			exit;
+		} else {
+			show_debug_message("SENDING LAST HSCENE UPDATE PACKET, DIDNT CHANGE THO")
+			hscene_check = 1
+		}
+	} else {
+		hscene_check = 0 // pos changed	
+	}
+	
+	show_debug_message("SENDING HSCENE UPDATE PACKET")
+	global.multiplayer_pkun_sync_hist = [hist[0], hist[1], hist[2], global.hscene_target, global.hscene_hide_fl, obj_pkun.hs_stp, hscene_check]
+
+	var target_socks = struct_get_names(obj_multiplayer.network.players)
+	var __mob_id = instance_exists(global.hscene_target) ? global.hscene_target.mob_id : 0
+	do_packet(new PLAY_CB_SET_HSCENE(obj_multiplayer.server.player.entity_uuid, __mob_id, global.hscene_hide_fl, obj_pkun.hs_stp), target_socks)
 }
 
 function _cb_create_entity(UUID, X, DX, Y, DIR, OBJ_INDEX) {
@@ -1127,12 +1285,14 @@ function _cb_create_entity(UUID, X, DX, Y, DIR, OBJ_INDEX) {
 	}
 //		struct_set(obj_multiplayer.network.network_objects, inst.entity_uuid)
 	
-	var pkt = new PLAY_CB_CREATE_ENTITY(entity_uuid, x, dx, y, dir, object_index) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
+	//var pkt = new PLAY_CB_CREATE_ENTITY(entity_uuid, x, dx, y, dir, object_index) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
 	var target_socks = struct_get_names(obj_multiplayer.network.players)
 	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
+	
+	do_packet(new PLAY_CB_CREATE_ENTITY(entity_uuid, x, dx, y, dir, object_index) , target_socks)
 }
 
 function _cb_destroy_entity(UUID) {
@@ -1143,12 +1303,12 @@ function _cb_destroy_entity(UUID) {
 	
 	show_debug_message("_cb_destroy_entity (" + string(UUID) + ")")
 
-	var pkt = new PLAY_CB_DESTROY_ENTITY(entity_uuid) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
-	var target_socks = struct_get_names(obj_multiplayer.network.players)
+	//var pkt = new PLAY_CB_DESTROY_ENTITY(entity_uuid) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
+	do_packet(new PLAY_CB_DESTROY_ENTITY(entity_uuid), struct_get_names(obj_multiplayer.network.players))
 	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
 }
 
 function _cb_destroy_object(object_index) {
@@ -1158,10 +1318,9 @@ function _cb_destroy_object(object_index) {
 	
 	show_debug_message("_cb_destroy_object (" + string(object_index) + ", " + string(object_get_name(object_index)) + ")")
 
-	var pkt = new PLAY_CB_DESTROY_OBJECT(object_index) //, tTW, tFO)
-	var pktbuf = pkt.writePacketData()
-	var target_socks = struct_get_names(obj_multiplayer.network.players)
-	
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	//var pkt = new PLAY_CB_DESTROY_OBJECT(object_index) //, tTW, tFO)
+	//var pktbuf = pkt.writePacketData()
+	do_packet(new PLAY_CB_DESTROY_OBJECT(object_index), struct_get_names(obj_multiplayer.network.players))
+	//multiplayer_send_packet(target_socks, pktbuf)
+	//buffer_delete(pktbuf)
 }

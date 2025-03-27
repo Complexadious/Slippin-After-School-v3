@@ -209,7 +209,7 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
     }
 }
 
-function buffer_write_ext(buffer_id, type, value) { //, schema = undefined) {
+function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 	switch type {
 		case buffer_vint: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.varint.id)
@@ -294,7 +294,24 @@ function buffer_write_ext(buffer_id, type, value) { //, schema = undefined) {
 			buffer_write_ext(buffer_id, buffer_vint, _len)
 			
 			for (var i = 0; i < _len; i++) {
-				buffer_write_ext(buffer_id, value_to_datatype(value[i]), value[i])	
+				var _dt = value_to_datatype(value[i])
+				var _val = value[i]
+				
+				if (is_array(schema)) {
+					if (is_array(_val)) && (array_length(schema) == array_length(_val)) {
+						// write each value to buffer
+						for (var j = 0; j < array_length(_val); j++) {
+							buffer_write_ext(buffer_id, schema[j], _val[j])		
+						}
+						continue;
+					} else {
+						show_debug_message("buffer_write_ext: Cannot write this array! Schema and Val are incompatible!")	
+					}
+				} else if (schema != undefined) {
+					_dt = schema // all same dt
+				}
+				
+				buffer_write_ext(buffer_id, _dt, _val)	
 			}
 			
 			exit;

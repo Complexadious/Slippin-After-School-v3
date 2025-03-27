@@ -1,21 +1,24 @@
 // some multiplayer stuff
 flashOn = global.flashOn
-hscene_target = global.hscene_target
 pressing_interact = keyboard_check(vk_return)
 lifeCur = global.lifeCur
 lifeMax = global.lifeMax
 charmed = global.charmed
 itemSlot = global.itemSlot
 move_speed = 0
+
+hs_hide_fl = global.hscene_hide_fl
+hscene_target = global.hscene_target
+hs_mob_id = (hscene_target != -4) ? global.hscene_target.mob_id : 0
 	
 if keyboard_check_pressed(ord("Y")) && global.game_debug
 	instance_create_depth(x, y, depth, obj_hachi)
 
 // things that will force pkun to be frozen
-if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || (obj_camera.camTarget != noone) && (obj_camera.camTarget != obj_pkun) || (global.disable_game_keyboard_input)
-	global.pkun_frozen = 1
-else
-	global.pkun_frozen = 0
+//if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || (obj_camera.camTarget != noone) && (obj_camera.camTarget != obj_pkun) || (global.disable_game_keyboard_input)
+//	global.pkun_frozen = 1
+//else
+//	global.pkun_frozen = 0
 	
 // things that will make pkun invincible
 if (obj_camera.freecam)

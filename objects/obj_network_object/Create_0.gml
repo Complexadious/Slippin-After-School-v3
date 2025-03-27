@@ -17,17 +17,31 @@ dx = 0
 dy = 0
 nametag = ""
 network_obj_type = "player"
-entity_uuid = generate_uuid4_string()
+//if (self[$ "entity_uuid"] != "")
+//	entity_uuid = generate_uuid4_string()
+//else
+//	show_debug_message("OBJ_NETWORK_OBJECT, NOT MAKING NEW UUID, ALREADY EXISTS!")
+entity_uuid = ""
 
 switch network_obj_type {
 	case "player": {
 		image_speed = adjust_to_fps(0.25)
 		depth = -3
+		
 		hs_stp = 0
 		hs_spr = -4
 		hs_ind = 0
 		hs_spd = 0
-		hs_cum = 0
+		hs_lp = -1
+		hs_tmr = 0
+		hs_snd_delay = 0
+		hs_snd_prev = -4
+		hs_snd_efct = -1
+		hs_trans = 0
+		hs_cum = 0	
+		hs_hide_fl = 0
+		hs_mob_id = 0
+
 		flashOn = 1
 		hiding = 0
 		running = 0
@@ -49,8 +63,8 @@ switch network_obj_type {
 		lifeCur = 3
 		charmed = 0
 		immortal = 0
-		username = "USERNAME"
-		nametag = username
+//		username = "USERNAME"
+		nametag = entity_uuid
 		player_sock = -1
 		break;	
 	}
@@ -60,7 +74,7 @@ switch network_obj_type {
 }
 
 // save id to network shit
-if is_multiplayer()
-	struct_set(obj_multiplayer.network.network_objects, entity_uuid, id)
+//if is_multiplayer()
+//	struct_set(obj_multiplayer.network.network_objects, entity_uuid, id)
 	
 show_debug_message("obj_network_object: CREATED!! uuid: " + entity_uuid)

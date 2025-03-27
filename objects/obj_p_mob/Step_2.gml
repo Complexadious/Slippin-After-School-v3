@@ -22,5 +22,5 @@ if (bstep_pos != [x, y, dir, state]) {
 		msg += "\n-STATE is same"
 	msg+= "\nPackets sent due to this mob: " + string(_pcnt)
 	
-	show_debug_message(msg)
+	if check_is_server() show_debug_message(msg)
 }

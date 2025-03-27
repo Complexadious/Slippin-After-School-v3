@@ -374,7 +374,7 @@ if (global.dialog_mode && (global.clock_trans_t == -1))
             play_se(se_catch, 1)
             mob_id = global.dialog_hs_id
             global.dialog_hs_id = 0
-            global.hscene_target = self
+            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
             global.hscene_hide_fl = obj_dialog.hide_fl
             global.dialog_acting = 0
             global.trans_alp = 1
@@ -891,5 +891,5 @@ if global.game_debug
 
 if is_multiplayer() {
 	draw_set_color((check_is_server()) ? c_blue : c_red)
-	draw_text(vx, vy, string_upper(check_is_server() ? "[SERVER]" : "[CLIENT]") + " [" + string(obj_multiplayer.network.connection_state) + "]")
+	draw_text(vx, vy, string_upper(check_is_server() ? "[SERVER]" : "[CLIENT]") + " [" + string(obj_multiplayer.network.connection_state) + "] [Recieved: " + string(global.multiplayer_packets_recieved) + "] [Sent: " + string(global.multiplayer_packets_sent) + "]")
 }

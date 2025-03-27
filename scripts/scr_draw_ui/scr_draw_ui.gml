@@ -11,13 +11,13 @@ function draw_ui_mob_spectate_list()
 	var mob_frame_padding = 10
 	
 	// add pkun as an option
-	array_push(_mobs, obj_pkun.object_index)
-	if instance_exists(obj_network_object)
-		array_push(_mobs, obj_network_object.object_index)
-	
+	array_push(_mobs, obj_pkun.id)
+	with (obj_network_object) {
+		array_push(_mobs, id)
+	}
 	// add all mob instances to the _mobs list with icons in _icons
 	with (obj_p_mob) {
-		array_push(_mobs, object_index)
+		array_push(_mobs, id)
 	}
 	
 	var mob_frames_count = array_length(_mobs)
