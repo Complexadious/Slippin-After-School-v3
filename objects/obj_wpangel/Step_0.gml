@@ -40,7 +40,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
                 mob_init_trace()
             }
             else
-                state = (1)
+                mob_set_state(1)
         }
         else
             mob_track_trace()
@@ -78,7 +78,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
     {
         if ((!((current_target.hiding && lostTarget))) && target_is_near() && (distance_to_object(current_target) < 2000))
         {
-            state = (2)
+            mob_set_state(2)
             lostTarget = 0
         }
         if ((lifespan > 0))
@@ -91,7 +91,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
         if (!lostTarget) && current_target.object_index == obj_pkun
         {
             play_se(se_catch, 1)
-            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
+            global.hscene_target = self; if check_is_server() sync_hscene_event();
             global.trans_alp = 1
         }
     }

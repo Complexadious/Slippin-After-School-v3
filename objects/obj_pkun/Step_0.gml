@@ -14,11 +14,13 @@ hs_mob_id = (hscene_target != -4) ? global.hscene_target.mob_id : 0
 if keyboard_check_pressed(ord("Y")) && global.game_debug
 	instance_create_depth(x, y, depth, obj_hachi)
 
+var cam_target_is_pkun = instance_exists(obj_camera.camTarget) ? (!((obj_camera.camTarget != noone) && (obj_camera.camTarget.object_index != obj_pkun))) : 1
+
 // things that will force pkun to be frozen
-//if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || (obj_camera.camTarget != noone) && (obj_camera.camTarget != obj_pkun) || (global.disable_game_keyboard_input)
-//	global.pkun_frozen = 1
-//else
-//	global.pkun_frozen = 0
+if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || !cam_target_is_pkun || (global.disable_game_keyboard_input)
+	global.pkun_frozen = 1
+else
+	global.pkun_frozen = 0
 	
 // things that will make pkun invincible
 if (obj_camera.freecam)
@@ -73,7 +75,7 @@ if immortal = 0
 
 //	instance_create_depth(x, y, depth, obj_timestop_fx)
 
-var nearest = instance_nearest(x, y, obj_interactable)
+var nearest = (cam_target_is_pkun) ? instance_nearest(x, y, obj_interactable) : instance_nearest(obj_camera.camTarget.x, obj_camera.camTarget.y, obj_interactable)
 if global.trans_spd != adjust_to_fps(0.05)
 	global.trans_spd = adjust_to_fps(0.05)
 if !audio_is_playing(bgm_rain_inside) && (room = rm_game || room == rm_gallery)
@@ -82,14 +84,14 @@ if keyboard_check_pressed(ord("I")) && global.game_debug
 	global.clock_min+= adjust_to_fps(1)
 if keyboard_check_pressed(ord("O")) && global.game_debug
 	global.clock_min-= adjust_to_fps(1)
-if (distance_to_object(nearest) < 50) 
+if (distance_to_object(nearest) < 50) || !cam_target_is_pkun
 {
     if (intrTarget != nearest)
     {
         intrTarget = nearest
         intrDone = 0
     }
-    intrNeed = nearest.need * (global.flashOn ? 1 : 1.5)
+    intrNeed = (cam_target_is_pkun) ? (nearest.need * (global.flashOn ? 1 : 1.5)) : 0 // instant
 }
 else
 {
@@ -97,7 +99,7 @@ else
     intrDone = 0
     intrNeed = 0
 }	
-var n = (noclip) ? obj_intr_portal : portal_nearest()
+var n = (noclip) ? obj_intr_portal : portal_nearest((cam_target_is_pkun) ? id : obj_camera.camTarget.id)
 if (np != n)
 {
     np = n
@@ -126,7 +128,7 @@ if (!game_is_paused())
     }
     if (!hiding)
     {
-        if (exhaust && stamina > adjust_to_fps(25))
+        if (exhaust && stamina > (25))
             exhaust = 0
         if keyboard_check(vk_shift) && (!collision_rectangle(x + (12 * dir), y - 1, x, y + 1, obj_wall, false, true) || noclip)
         {
@@ -135,7 +137,7 @@ if (!game_is_paused())
         }
         else
             running = 0
-        if (stamina <= adjust_to_fps(50))
+        if (stamina <= (50))
         {
             if (pantDelay > 0)
                 pantDelay-= adjust_to_fps(1)
@@ -145,167 +147,167 @@ if (!game_is_paused())
                 instance_create_depth(x, (y + 14), depth, obj_efct_pant)
             }
         }
-	if keyboard_check(vk_left) && !global.pkun_frozen
-	{
-	    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
-	    var can_move = !collision_rectangle(x - move_speed, y - 1, x, y + 1, obj_wall, false, true) || noclip
-	    //show_debug_message("L PKUN MOVE_SPEED = " + string(move_speed))
-	    if (can_move)
-	    {	
-			dir = -1
+		if keyboard_check(vk_left) && !global.pkun_frozen
+		{
+		    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
+		    var can_move = !collision_rectangle(x - move_speed, y - 1, x, y + 1, obj_wall, false, true) || noclip
+		    //show_debug_message("L PKUN MOVE_SPEED = " + string(move_speed))
+		    if (can_move)
+		    {	
+				dir = -1
 			
-			// update pkun pos
-			if (last_movement_key != vk_left) || (last_move_speed != move_speed){
-				sync_pkun_event()	// we moved, speed is different
-			}
-//			else
-//				show_debug_message("VK_LEFT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
-			
-	        if (soundDelay > 0)
-	            soundDelay-= adjust_to_fps(1)
-	        else if (check_index(0) || check_index(3)) && !sliding
-	        {
-	            soundDelay = (5)
-				var _i = random_range(0, array_length(se_step))
-	            play_se(se_step[_i], (0.35 + 0.25 * running))
-	            if ((!((y < 720 && x > 6540 && x < 8810))) && chance(50))
-					_i = random_range(0, array_length(se_creak))
-	                play_se(se_creak[_i], (0.3 + 0.2 * running))
-	        }        
-	        if running
-	        {
-				if keyboard_check(vk_control)
-				{
-					// handle sliding
-					x -= sliding_momentum
-					slideCost = (0.0225 * sliding_momentum)
-					set_sprite(spr_pkun_slide, 1)
-					if (sliding_momentum > adjust_to_fps(slideCost))
-					{
-						sliding = 1
-						sliding_momentum -= adjust_to_fps(slideCost)	
-					} else {
-						sliding = 0
-						sliding_momentum = 0
-					}
+				// update pkun pos
+				if (last_movement_key != vk_left) || (last_move_speed != move_speed){
+					sync_pkun_event()	// we moved, speed is different
 				}
-				else
-				{
+	//			else
+	//				show_debug_message("VK_LEFT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
+			
+		        if (soundDelay > 0)
+		            soundDelay-= adjust_to_fps(1)
+		        else if (check_index(0) || check_index(3)) && !sliding
+		        {
+		            soundDelay = (5)
+					var _i = random_range(0, array_length(se_step))
+		            play_se(se_step[_i], (0.35 + 0.25 * running))
+		            if ((!((y < 720 && x > 6540 && x < 8810))) && chance(50))
+						_i = random_range(0, array_length(se_creak))
+		                play_se(se_creak[_i], (0.3 + 0.2 * running))
+		        }        
+		        if running
+		        {
+					if keyboard_check(vk_control)
+					{
+						// handle sliding
+						x -= sliding_momentum
+						slideCost = (0.0225 * sliding_momentum)
+						set_sprite(spr_pkun_slide, 1)
+						if (sliding_momentum > adjust_to_fps(slideCost))
+						{
+							sliding = 1
+							sliding_momentum -= adjust_to_fps(slideCost)	
+						} else {
+							sliding = 0
+							sliding_momentum = 0
+						}
+					}
+					else
+					{
+			            x -= move_speed;
+						sliding_momentum = move_speed
+						sliding = 0
+			            set_sprite(spr_pkun_dash, (1))
+			            if (stamina > adjust_to_fps(runCost))
+			                stamina -= adjust_to_fps(runCost)
+			            else
+			            {
+			                stamina = 0
+			                running = 0
+			                exhaust = 1
+			            }
+					}
+		        }
+		        else
+		        {
 		            x -= move_speed;
-					sliding_momentum = move_speed
-					sliding = 0
-		            set_sprite(spr_pkun_dash, (1))
-		            if (stamina > adjust_to_fps(runCost))
-		                stamina -= adjust_to_fps(runCost)
-		            else
-		            {
-		                stamina = 0
-		                running = 0
-		                exhaust = 1
-		            }
-				}
-	        }
-	        else
-	        {
-	            x -= move_speed;
-	            set_sprite(spr_pkun_walk, (0.5))
-	        }
-	    }
-	    else
-	    {
-	        set_sprite(spr_pkun_idle, (1/3))
-	        image_speed = (1/3)
-	    }
+		            set_sprite(spr_pkun_walk, (0.5))
+		        }
+		    }
+		    else
+		    {
+		        set_sprite(spr_pkun_idle, (1/3))
+		        image_speed = (1/3)
+		    }
 
-		last_movement_key = vk_left
-//		last_move_speed = move_speed
-	}
-	else if keyboard_check(vk_right) && !global.pkun_frozen
-	{
-	    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
-	    var can_move = !collision_rectangle(x, y - 1, x + move_speed, y + 1, obj_wall, false, true) || noclip
-		//show_debug_message("R PKUN MOVE_SPEED = " + string(move_speed))
-	    if (can_move)
-	    {	
-			dir = 1
+			last_movement_key = vk_left
+	//		last_move_speed = move_speed
+		}
+		else if keyboard_check(vk_right) && !global.pkun_frozen
+		{
+		    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
+		    var can_move = !collision_rectangle(x, y - 1, x + move_speed, y + 1, obj_wall, false, true) || noclip
+			//show_debug_message("R PKUN MOVE_SPEED = " + string(move_speed))
+		    if (can_move)
+		    {	
+				dir = 1
 		
-			// update pkun pos
-			if (last_movement_key != vk_right) || (last_move_speed != move_speed){
-				sync_pkun_event()	// we moved, speed is different
-			}			
-//			else
-//				show_debug_message("VK_RIGHT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
+				// update pkun pos
+				if (last_movement_key != vk_right) || (last_move_speed != move_speed){
+					sync_pkun_event()	// we moved, speed is different
+				}			
+	//			else
+	//				show_debug_message("VK_RIGHT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
 			
-	        if (soundDelay > 0)
-	            soundDelay-= adjust_to_fps(1)
-	        else if (check_index(0) || check_index(3)) && !sliding
-	        {
-	            soundDelay = (5)
-				var _i = random_range(0, array_length(se_step))
-	            play_se(se_step[_i], (0.35 + 0.25 * running))
-	            if ((!((y < 720 && x > 6540 && x < 8810))) && chance(50))
-					_i = random_range(0, array_length(se_creak))
-	                play_se(se_creak[_i], (0.3 + 0.2 * running))
-	        }
-	        if running
-	        {
-				if keyboard_check(vk_control)
-				{
-					// handle sliding
-					x += sliding_momentum
-					slideCost = (0.025 * sliding_momentum)
-					set_sprite(spr_pkun_slide, 1)
-					if (sliding_momentum > adjust_to_fps(slideCost))
+		        if (soundDelay > 0)
+		            soundDelay-= adjust_to_fps(1)
+		        else if (check_index(0) || check_index(3)) && !sliding
+		        {
+		            soundDelay = (5)
+					var _i = random_range(0, array_length(se_step))
+		            play_se(se_step[_i], (0.35 + 0.25 * running))
+		            if ((!((y < 720 && x > 6540 && x < 8810))) && chance(50))
+						_i = random_range(0, array_length(se_creak))
+		                play_se(se_creak[_i], (0.3 + 0.2 * running))
+		        }
+		        if running
+		        {
+					if keyboard_check(vk_control)
 					{
-						sliding = 1
-						sliding_momentum -= adjust_to_fps(slideCost)	
-					} else {
-						sliding = 0
-						sliding_momentum = 0
+						// handle sliding
+						x += sliding_momentum
+						slideCost = (0.025 * sliding_momentum)
+						set_sprite(spr_pkun_slide, 1)
+						if (sliding_momentum > adjust_to_fps(slideCost))
+						{
+							sliding = 1
+							sliding_momentum -= adjust_to_fps(slideCost)	
+						} else {
+							sliding = 0
+							sliding_momentum = 0
+						}
 					}
-				}
+					else
+					{
+			            x += move_speed;
+						sliding_momentum = move_speed
+						sliding = 0
+			            set_sprite(spr_pkun_dash, 1)
+			            if (stamina > adjust_to_fps(runCost))
+			                stamina -= adjust_to_fps(runCost)
+			            else
+			            {
+			                stamina = 0
+			                running = 0
+			                exhaust = 1
+			            }
+					}
+		        }
 				else
-				{
+		        {
 		            x += move_speed;
-					sliding_momentum = move_speed
-					sliding = 0
-		            set_sprite(spr_pkun_dash, 1)
-		            if (stamina > adjust_to_fps(runCost))
-		                stamina -= adjust_to_fps(runCost)
-		            else
-		            {
-		                stamina = 0
-		                running = 0
-		                exhaust = 1
-		            }
-				}
-	        }
-			else
-	        {
-	            x += move_speed;
-	            set_sprite(spr_pkun_walk, (0.5))
-	        }
-	    }
-	    else
-	    {
-	        set_sprite(spr_pkun_idle, (1/3))
-	        image_speed = (1/3)
-	    }
+		            set_sprite(spr_pkun_walk, (0.5))
+		        }
+		    }
+		    else
+		    {
+		        set_sprite(spr_pkun_idle, (1/3))
+		        image_speed = (1/3)
+		    }
 		
-		last_movement_key = vk_right
-//		last_move_speed = move_speed
-	}
-	else
-	{
-//		show_debug_message("VK_NONE: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
-        set_sprite(spr_pkun_idle, (1/3))
-		if (last_move_speed != move_speed)
-			sync_pkun_event() // stopped moving
-		last_movement_key = -4
-		move_speed = 0
-		last_move_speed = 0
-	}
-    if keyboard_check_pressed(ord("F")) && !global.disable_game_keyboard_input
+			last_movement_key = vk_right
+	//		last_move_speed = move_speed
+		}
+		else
+		{
+	//		show_debug_message("VK_NONE: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
+	        set_sprite(spr_pkun_idle, (1/3))
+			if (last_move_speed != move_speed)
+				sync_pkun_event() // stopped moving
+			last_movement_key = -4
+			move_speed = 0
+			last_move_speed = 0
+		}
+		if keyboard_check_pressed(ord("F")) && !global.disable_game_keyboard_input
         {
             if (global.flashPow > 0)
                 global.flashOn *= -1
@@ -328,18 +330,24 @@ if (!game_is_paused())
                     intrDone = 0
                     if (intrTarget.type == "portal")
                     {
-                        play_se(intrTarget.se, 1)
-                        global.transition = 1
-                        portalPort = intrTarget.port
-                        if (instance_number(obj_p_mob) > 0 && (!timeStop))
-                        {
-                            with (obj_p_mob)
-                            {
-                                if doTrack
-                                    mob_add_trace()
-                            }
-							baldi_add_tracer()
-                        }
+						if (cam_target_is_pkun) {
+							play_se(intrTarget.se, 1)
+							global.transition = 1
+							portalPort = intrTarget.port
+							if (instance_number(obj_p_mob) > 0 && (!timeStop))
+	                        {
+	                            with (obj_p_mob)
+	                            {
+	                                if doTrack
+	                                    mob_add_trace()
+	                            }
+								baldi_add_tracer()
+	                        }
+						} else {
+							with (obj_camera.camTarget)
+								mob_use_portal()
+							keyboard_clear(vk_return)
+						}
                     }
                     else if (intrTarget.type == "hidespot")
                     {
@@ -484,11 +492,12 @@ if (global.hscene_target != noone)
         }
     }
 	
-	show_debug_message("HSCENE UPDATED")
-	var _mob_id = global.hscene_target.mob_id
-	instance_destroy(global.hscene_target)
-	global.hscene_target = {"mob_id": _mob_id}
-	show_debug_message("HSCENE TARGET = " + string(global.hscene_target))
+	if (global.hscene_target != {"mob_id": hs_mob_id}) {
+		show_debug_message("HSCENE UPDATED")
+		hs_mob_id = global.hscene_target.mob_id
+		instance_destroy(global.hscene_target)
+		global.hscene_target = {"mob_id": hs_mob_id}
+	}
 	
     hscene_animate()
 	immortal = 180

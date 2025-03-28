@@ -1,5 +1,5 @@
 //event_inherited()
-if (check_is_server()) {
+if (check_is_server()) && (controlled <= 0) {
 	dx = 0	
 }
 

@@ -3,6 +3,7 @@
 // if position is different after step, update everything.
 if (bstep_pos != [x, y, dir, state]) {
 	_cb_sync_mob()
+	
 	var msg = "OBJ_P_MOB: (" + string(object_get_name(object_index)) + ") Position changed!"
 	if (bstep_pos[0] != x)
 		msg += "\n-X pos changed"

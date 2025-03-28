@@ -3,7 +3,7 @@ global_bstep = {}
 global.multiplayer_packets_recieved = 0
 global.multiplayer_packets_sent = 0
 
-global.multiplayer_pkun_sync_hist = [0, 0, 1, -4, 0, 0, 0] // X, Y, DIR, HSCENE_TARGET, HS_HIDE_FL, HS_STP, HS_CHECK
+global.multiplayer_pkun_sync_hist = [0, 0, 1, 0, 0, 0] // X, Y, DIR, HS_MOB_ID, HS_STP, HS_CHECK
 global.multiplayer_check_sent_last_pkun_pos = 0 // when we stop moving, send last update packet to make sure other pkun stops moving
 global.skip_clock = 0
 
@@ -177,7 +177,8 @@ gui_process_struct_value(global.gui_value_struct_ex)
 global.keybinds = {
 	"freecamToggle": vk_insert,
 	"commandBarOpenCommand": 191,
-	"commandBarOpenChat": ord("T")
+	"commandBarOpenChat": ord("T"),
+	"attemptMobControl": ord("C")
 }
 
 global.camera_hide_ui = 0

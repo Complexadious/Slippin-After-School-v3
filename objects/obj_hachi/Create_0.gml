@@ -3,7 +3,7 @@ event_inherited()
 // You can write your code in this editor
 lifespan = 0
 mob_id = 9
-state = (2)
+mob_set_state(2)
 dir = 1
 soundDelay = 0
 doTrack = 1

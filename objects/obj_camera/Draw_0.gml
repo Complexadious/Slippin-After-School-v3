@@ -126,6 +126,19 @@ if instance_exists(p)
         {
             x -= adjust_to_fps((x - camTarget.x) / 10)
             y -= adjust_to_fps(((y - (560 + (720 * floor((camTarget.y / 720))))) + 200) / 10)
+			
+			// do controller stuff
+			if keyboard_check_pressed(global.keybinds[$ "attemptMobControl"]) {
+				if is_undefined(camTarget[$ "controlled"])
+					exit;
+				
+				show_debug_message("TRYING TO TOGGLE PLAYER CONTROL FOR MOB!!! (" + string(object_get_name(camTarget.object_index)) + ")")
+				camTarget.controlled = (camTarget.controlled == 0) ? -1 : 0
+				if (!check_is_server()) && (is_multiplayer()) {
+					// send request to control anyways
+					do_packet(new PLAY_SB_SET_ENTITY_CONTROL(-1, camTarget.entity_uuid, abs(camTarget.controlled)), obj_multiplayer.network.server.connection)
+				}
+			}
         }
         else
         {

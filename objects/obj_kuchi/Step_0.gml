@@ -44,7 +44,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
     {
         if ((!((current_target.hiding && lostTarget))) && target_is_near() && (distance_to_object(current_target) < 2000))
         {
-            state = (2)
+            mob_set_state(2)
             lostTarget = 0
         }
         if ((state == (1)))
@@ -58,7 +58,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
             if ((abs((x - target_x)) < 20))
             {
                 timer = irandom_range(150, 400)
-                state = (0)
+                mob_set_state(0)
             }
         }
         else if ((state == (0)))
@@ -75,7 +75,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop())) || actor
         if (!lostTarget) && current_target.object_index == obj_pkun
         {
             play_se(se_catch, 1)
-            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
+            global.hscene_target = self; if check_is_server() sync_hscene_event();
             global.trans_alp = 1
             global.hscene_hide_fl = 1
         }

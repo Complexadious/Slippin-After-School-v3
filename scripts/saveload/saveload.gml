@@ -140,7 +140,7 @@ function sys_load_setting() //gml_Script_sys_load_setting
         global.language = 1
         global.shaderOn = 1
 //		global.shaderOn = 0
-        global.cowardOn = 0
+        global.cowardOn = 1
         global.vol_se = 100
         global.vol_bgm = 50
         sys_save_setting()

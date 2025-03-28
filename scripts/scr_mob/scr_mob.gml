@@ -1,20 +1,28 @@
 function can_client_mob_move() {
-	if !is_multiplayer()
+	if (controlled == -1) //(controlled == -1) || ((controlled == 0) && check_is_server()) // (-1 here means its owned by self, 0 means unowned, other numbers mean sock owner) if controlled, no, no matter what
+		return 0
+	else if (!is_multiplayer())
 		return 1
-	else if check_is_server()
+	else if (check_is_server()) && (controlled == 0)
 		return 1
 	return 0
 }
 
-function mob_move(delta_x = 0, delta_y = 0) {
-	if can_client_mob_move() {
+function mob_move(delta_x = 0, delta_y = 0, force_move = 0) {
+	if (can_client_mob_move() || force_move) {
 		x += adjust_to_fps(delta_x)
 		last_move_speed = abs(delta_x)
 		if (delta_y != 0)
 			y += adjust_to_fps(delta_y)
-		dx = abs(delta_x)
+		dx = (delta_x)
 	} else {
 		last_move_speed = 0
+	}
+}
+
+function mob_set_state(new_state = 0, force = 0) {
+	if (can_client_mob_move() || force) {
+		state = new_state
 	}
 }
 
@@ -36,8 +44,8 @@ function mob_set_y(new_y) {
 	}
 }
 
-function mob_set_dir(new_dir) {
-	if check_is_server()
+function mob_set_dir(new_dir, force = 0) {
+	if (can_client_mob_move() || force)
 		dir = new_dir
 }
 
@@ -144,7 +152,7 @@ function hanako_hide() //gml_Script_hanako_hide
     return hd;
 }
 
-function portal_nearest() //gml_Script_portal_nearest
+function portal_nearest(inst = self) //gml_Script_portal_nearest
 {
     var n = -4
     if ((instance_number(obj_intr_portal) > 0))
@@ -368,7 +376,7 @@ function mob_track_trace() //gml_Script_mob_track_trace
     else
     {
         show_debug_message("mob lost trace! \n- trace_i = " + string(trace_i))
-        state = (1)
+        mob_set_state(1)
         lostTarget = 1
         mob_wander(0)
 //        // mob_init_trace()
@@ -488,7 +496,7 @@ function mob_wander(argument0) //gml_Script_mob_wander
     if (argument0 && chance(40))
     {
         if mob_find_portal()
-            state = (2)
+            mob_set_state(2)
     }
     else
     {
@@ -502,7 +510,7 @@ function mob_wander(argument0) //gml_Script_mob_wander
             instance_destroy()
         show_debug_message(((((((((((("d=" + string(d)) + " len=") + string(len)) + " state=") + string(state)) + " lostTarget=") + string(lostTarget)) + " i=") + string(trace_i)) + " usePortal=") + string(argument0)))
         target_x = (x + (d * len))
-        state = (1)
+        mob_set_state(1)
     }
 }
 

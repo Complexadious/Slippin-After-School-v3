@@ -6,7 +6,7 @@ target_x = 0
 // mob_init_trace()
 mob_id = 2
 dir = 1
-state = (0)
+mob_set_state(0)
 soundDelay = 0
 lostTarget = 1
 doTrack = 1

@@ -36,7 +36,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
             else if !obj_pkun.immortal
             {
                 play_se(se_charmed, 1)
-                global.hscene_target = self; if check_is_server() _cb_sync_hscene();
+                global.hscene_target = self; if check_is_server() sync_hscene_event();
                 global.trans_alp = 1
             }
         }

@@ -12,6 +12,8 @@ last_move_speed = 0
 dx = 0
 dir = 1
 state = 0
+controlled = 0
+move_speed = 0
 
 entity_uuid = (check_is_server()) ? generate_uuid4_string() : ""
 if ((entity_uuid != "") && (is_multiplayer()))

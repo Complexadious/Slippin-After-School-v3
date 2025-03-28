@@ -13,7 +13,7 @@ if ((!game_is_paused()) && (!obj_pkun.timeStop))
             if ((loc == location_get_name((obj_pkun.y <= 2100), obj_pkun.np.port, 1))) && !obj_pkun.immortal
             {
                 play_se(se_catch, 1)
-                global.hscene_target = self; if check_is_server() _cb_sync_hscene();
+                global.hscene_target = self; if check_is_server() sync_hscene_event();
                 global.trans_alp = 1
             }
         }

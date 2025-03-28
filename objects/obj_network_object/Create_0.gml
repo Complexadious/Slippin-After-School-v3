@@ -45,6 +45,11 @@ switch network_obj_type {
 		flashOn = 1
 		hiding = 0
 		running = 0
+		sliding = 0
+		stamina = 100
+		stmRegen = 0
+		runCost = ((room == rm_game) ? 0.25 : 0)
+		pantDelay = 0
 		hscene_target = -4
 		intrTarget = -4
 		np = -4
@@ -54,7 +59,6 @@ switch network_obj_type {
 		se_creak = [se_creak_1, se_creak_2, se_creak_3, se_creak_4]
 		shadow = instance_create_depth(x, y, 1, obj_object_shadow)
 		soundDelay = 0
-		just_left_hide_spot = 0
 		intrDone = -4
 		intrNeed = -4
 		pressing_interact = 0
@@ -63,7 +67,8 @@ switch network_obj_type {
 		lifeCur = 3
 		charmed = 0
 		immortal = 0
-//		username = "USERNAME"
+		exhaust = 0
+		username = "USERNAME"
 		nametag = entity_uuid
 		player_sock = -1
 		break;	

@@ -6,10 +6,6 @@ function hscene_animate(affect_client = 1) //gml_Script_hscene_animate
 		hscene_end(affect_client)
 		return;
 	}
-	
-//	if (object_index == obj_pkun) {
-//		_cb_sync_hscene()	
-//	}
 
     image_speed = 0
     if ((hs_snd_delay > 0))
@@ -348,13 +344,16 @@ function hscene_animate(affect_client = 1) //gml_Script_hscene_animate
         hs_stp++
         hs_lp = -1
         hs_snd_delay = 0
-		_cb_sync_hscene()
     }
+	if (object_index == obj_pkun) {
+		sync_hscene_event()
+	}
 }
 
 function hscene_play_ext(argument0, argument1, argument2, argument3) //gml_Script_hscene_play_ext
 {
-    hs_spd = adjust_to_fps(argument1)
+    hs_spd = (argument1)
+	var _adjusted_spd = adjust_to_fps(hs_spd)
     if ((hs_spr != argument0))
     {
         hs_spr = argument0
@@ -363,8 +362,8 @@ function hscene_play_ext(argument0, argument1, argument2, argument3) //gml_Scrip
     }
     if ((hs_lp == -1) && (argument2 > 0))
         hs_lp = argument2
-    if (((hs_ind + hs_spd) < sprite_get_number(argument0)))
-        hs_ind += hs_spd
+    if (((hs_ind + _adjusted_spd) < sprite_get_number(argument0)))
+        hs_ind += _adjusted_spd
     else if ((hs_lp > 0))
     {
         if (!global.dialog_mode)
@@ -433,12 +432,15 @@ function hscene_snd_at(argument0, argument1, argument2) //gml_Script_hscene_snd_
 }
 
 function hscene_end(affect_client = 1) //gml_Script_hscene_end
-{
-	if !affect_client
-		exit;
-	
-    if (!global.game_is_over)
+{	
+    if (!global.game_is_over) && affect_client
     {
+		if check_is_server() {
+			instance_destroy(global.hscene_target)
+			global.hscene_target = -4
+		}
+		else
+			instance_destroy(obj_p_mob)
         global.hscene_target = -4
         global.trans_alp = 1
         global.hscene_hide_fl = 0
@@ -454,8 +456,7 @@ function hscene_end(affect_client = 1) //gml_Script_hscene_end
         hs_trans = 0
         hs_cum = 0
         immortal = 180
-        with (obj_p_mob)
-            instance_destroy()
+		hs_mob_id = 0
         if hiding
         {
             hiding = 0
@@ -470,14 +471,31 @@ function hscene_end(affect_client = 1) //gml_Script_hscene_end
         }
         mobSpawnCt = (irandom_range(400, 600) * (1 - ((0.4 * global.clock_tk) / 360)))
     }
-	_cb_sync_hscene()
+	
+	if (object_index == obj_pkun) {
+		sync_hscene_event()
+	} else {
+		hs_stp = 0
+        hs_lp = -1
+        hs_ind = 0
+        hs_spd = 0
+        hs_spr = -4
+        hs_tmr = 0
+        hs_snd_delay = 0
+        hs_snd_prev = -4
+        hs_snd_efct = -1
+        hs_trans = 0
+        hs_cum = 0
+        immortal = 180
+		hs_mob_id = 0
+	}
 }
 
 function hscene_cum(affect_client = 1) //gml_Script_hscene_cum
 {	
     if ((room == rm_game) && (!hs_cum)) && affect_client
     {
-        hs_cum = 1
+		hs_cum = 1
         global.charmed = 0
         if ((global.lifeCur > 0))
             global.lifeCur--
@@ -485,6 +503,11 @@ function hscene_cum(affect_client = 1) //gml_Script_hscene_cum
         if ((global.lifeCur <= 0))
             global.game_is_over = 1
     }
-	_cb_sync_hscene()
+	
+	if (object_index == obj_pkun) {
+		sync_hscene_event()
+	} else {
+		hs_cum = 1
+	}
 }
 

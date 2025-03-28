@@ -1,3 +1,5 @@
+event_inherited()
+
 if (role == "custom") 
 {
     if (state == "idle" && idle_sprite != -1)

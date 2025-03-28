@@ -374,7 +374,7 @@ if (global.dialog_mode && (global.clock_trans_t == -1))
             play_se(se_catch, 1)
             mob_id = global.dialog_hs_id
             global.dialog_hs_id = 0
-            global.hscene_target = self; if check_is_server() _cb_sync_hscene();
+            global.hscene_target = self; if check_is_server() sync_hscene_event();
             global.hscene_hide_fl = obj_dialog.hide_fl
             global.dialog_acting = 0
             global.trans_alp = 1
@@ -880,9 +880,12 @@ if global.game_debug
     draw_set_alpha(1)
     setFont("B", 16)
     draw_set_color(c_white)
-	if instance_exists(obj_camera)
-		debug_log += ("\n===== Camera =====\nx = " + string(obj_camera.x) + "\ny = " + string(obj_camera.y) + "\nzoom = " + string(obj_camera.zoom) + "\ncamTarget = " + string(obj_camera.camTarget))
-    if instance_exists(obj_pkun)
+	if instance_exists(obj_camera) {
+		var ct = obj_camera.camTarget
+		var obj_name = (instance_exists(ct)) ? object_get_name(ct.object_index) : ""
+		debug_log += ("\n===== Camera =====\nx = " + string(obj_camera.x) + "\ny = " + string(obj_camera.y) + "\nzoom = " + string(obj_camera.zoom) + "\ncamTarget = " + string(obj_camera.camTarget) + " (" + string(obj_name) + ")")
+	}
+	if instance_exists(obj_pkun)
         debug_log += ((((((((((((((((((("\n===== Player =====\nlocation = " + string(pkun_get_location(1))) + "\nport = ") + string(obj_pkun.portalPort)) + "\nx = ") + string(obj_pkun.x)) + "\ny = ") + string(obj_pkun.y)) + "\nhs_stp = ") + string(obj_pkun.hs_stp)) + "\nhs_spr = ") + sprite_get_name(obj_pkun.hs_spr)) + "\nhs_ind = ") + string(obj_pkun.hs_ind)) + "\nhs_lp = ") + string(obj_pkun.hs_lp)) + "\nhs_snd_prev = ") + audio_get_name(obj_pkun.hs_snd_prev)) + "\nmob numbers = ") + string(instance_number(obj_p_mob)) + "\nroom = " + string(room))
     if global.dialog_mode
         debug_log += ((((((((((("\n===== Dialog =====\ndialog_mode = " + string(global.dialog_mode)) + "\ndialog_name = ") + global.dialog_name) + "\ndialog_line = ") + global.dialog_line) + "\ndialog_num = ") + string(global.dialog_num_curr)) + "/") + string(global.dialog_num_total)) + "\nobj_dialog = ") + string(instance_number(obj_dialog)) + "\ndialog_se = " + string(global.dialog_se) + "\ndialog_se_instance = " + string(global.dialog_se_instance))
