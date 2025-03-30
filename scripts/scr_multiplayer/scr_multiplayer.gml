@@ -1087,7 +1087,266 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, ENTITY_UUID = "", X = 0, DX = 0, Y =
 }
 ds_map_add(global.packet_registry, 63, PLAY_SB_MOVE_ENTITY_POS)
 
+function PLAY_SB_SET_TIME_STOP(SOCK = -1, TIMESTOP = 0) constructor {
+	self.id = 64
+	self.sock = SOCK
+	self.timestop = TIMESTOP
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.timestop = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_vint, self.timestop)
+		return buf
+	}
+	processPacket = function() {
+		// adjust server version of timestop
+		global.timeStop = self.timestop
+		global.timeStopCanMove = (self.sock == -1)
+		play_se(se_tiktok)
+			
+		// replicate to other clients
+		var _t = array_without(struct_get_names(obj_multiplayer.server.clients), self.sock)
+		do_packet(new PLAY_CB_SET_TIME_STOP(0, global.timeStop), _t)
+	}
+}
+ds_map_add(global.packet_registry, 64, PLAY_SB_SET_TIME_STOP)
 
+function PLAY_CB_SET_TIME_STOP(CAN_CLIENT_MOVE_IN_TIMESTOP = 0, TIMESTOP = 0) constructor {
+	self.id = 65
+	self.can_move = CAN_CLIENT_MOVE_IN_TIMESTOP
+	self.timestop = TIMESTOP
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.can_move = buffer_read_ext(buf)
+		self.timestop = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_bool, self.can_move)
+		buffer_write_ext(buf, buffer_vint, self.timestop)
+		return buf
+	}
+	processPacket = function() {
+		// adjust client version of timestop
+		global.timeStop = self.timestop
+		global.timeStopCanMove = self.can_move
+		play_se(se_tiktok)
+	}
+}
+ds_map_add(global.packet_registry, 65, PLAY_CB_SET_TIME_STOP)
+
+function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructor {
+	self.id = 66
+	self.sock = SOCK
+	self.intr_type = INTR_TYPE
+	self.x = X
+	self.y = Y
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.intr_type = buffer_read_ext(buf)
+		self.x = buffer_read_ext(buf)
+		self.y = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_string, self.intr_type)
+		buffer_write_ext(buf, buffer_vint, self.x)
+		buffer_write_ext(buf, buffer_vint, self.y)
+		return buf
+	}
+	processPacket = function() {
+		// interact with thing on server side
+		var _intr = instance_nearest(self.x, self.y, obj_interactable)
+		var _plr = sock_to_inst(self.sock)
+		var _hidebox = (self.intr_type == "hidebox")
+		
+		if (!instance_exists(_intr) && !_hidebox) || !instance_exists(_plr) {
+			show_debug_message("PLAY_SB_INTERACT_AT: Interacted w/ obj not found or dont exist OR player doesnt exist")
+			exit;
+		}
+		
+		with (_plr) {
+			if (distance_to_object(_intr) > 50) && !_hidebox {
+				show_debug_message("PLAY_SB_INTERACT_AT: Tried to interact w/ obj that's too far from player!")
+				exit;
+			}
+		}
+		
+		if !(_hidebox) && (_intr.type != self.intr_type) {
+			show_debug_message("PLAY_SB_INTERACT_AT: Interacted w/ obj type doesnt match provided intr_type! Cancelling!")
+			exit;
+		}
+		
+		switch (self.intr_type) {
+			case "portal": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ portal!")
+				play_se_at(_intr.se, _intr.x, _intr.y)
+				break;
+			}
+			case "hidespot": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ hidespot!")
+	            play_se_at(_intr.se_in, _intr.x, _intr.y)
+	            _intr.shake = (20)
+	            _intr.locked = !_intr.locked
+				_plr.hiding = !_plr.hiding
+				_plr.x = _intr.x
+				break;
+			}
+			case "itemspot": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ itemspot!")
+				play_se_at(_intr.se, _intr.x, _intr.y)
+				if (_intr.x == self.x) && (intr.y == self.y) // must be in same exact pos
+					instance_destroy(_intr.id)
+				break;
+			}
+			case "figure": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ figure!")
+				show_debug_message("Figure Interaction Handling is not integrated yet...")
+				break;
+			}
+			case "piano": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ piano!")
+	            play_se(_intr.se, 1)
+	            instance_destroy(_intr.id)
+				break;
+			}
+			case "hidebox": {
+				show_debug_message("PLAY_SB_INTERACT_AT: SOCK " + string(self.sock) + " Interacted w/ hidebox!")
+				if (_plr.hidebox == -4) {
+					_plr.hidebox = instance_create_depth(_plr.x, _plr.y, 0, obj_intr_hidebox)
+					play_se_at(_plr.hidebox.se_in, _plr.x, _plr.y)
+			        _plr.hidebox.shake = 20
+					_plr.hidebox.locked = 1
+			        _plr.hiding = 1
+				} else {
+					instance_destroy(_plr.hidebox)
+					_plr.hidebox = -4
+					_plr.hiding = 0
+				}
+			}
+		}
+			
+		// replicate to other clients
+		if (player_count > 1) {
+			var _t = array_without(struct_get_names(obj_multiplayer.server.clients), self.sock)
+			do_packet(new PLAY_CB_INTERACT_AT(_plr.entity_uuid, self.intr_type, self.x, self.y), _t)
+		}
+	}
+}
+ds_map_add(global.packet_registry, 66, PLAY_SB_INTERACT_AT)
+
+function PLAY_CB_INTERACT_AT(ENTITY_UUID = "", INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_CLIENT = 0) constructor {
+	self.id = 67
+	self.uuid = ENTITY_UUID
+	self.intr_type = INTR_TYPE
+	self.x = X
+	self.y = Y
+	self.as_target_client = AS_TARGET_CLIENT
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.uuid = buffer_read_ext(buf)
+		self.intr_type = buffer_read_ext(buf)
+		self.x = buffer_read_ext(buf)
+		self.y = buffer_read_ext(buf)
+		self.as_target_client = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_uuid, self.uuid)
+		buffer_write_ext(buf, buffer_string, self.intr_type)
+		buffer_write_ext(buf, buffer_vint, self.x)
+		buffer_write_ext(buf, buffer_vint, self.y)
+		buffer_write_ext(buf, buffer_bool, self.as_target_client)
+		return buf
+	}
+	processPacket = function() {
+		// interact with thing on client side
+		var _intr = instance_nearest(self.x, self.y, obj_interactable)
+		var _plr = (self.as_target_client) ? obj_pkun : entity_uuid_to_inst(self.uuid)
+		var _hidebox = (self.intr_type == "hidebox")
+		
+		if (!instance_exists(_intr) && !_hidebox) || !instance_exists(_plr) {
+			show_debug_message("PLAY_CB_INTERACT_AT: Interacted w/ obj not found or dont exist OR player doesnt exist")
+			exit;
+		}
+		
+		with (_plr) {
+			if (distance_to_object(_intr) > 50) && !_hidebox	 {
+				show_debug_message("PLAY_CB_INTERACT_AT: Tried to interact w/ obj that's too far from player!")
+				exit;
+			}
+		}
+		
+		if !(_hidebox) && (_intr.type != self.intr_type) {
+			show_debug_message("PLAY_CB_INTERACT_AT: Interacted w/ obj type doesnt match provided intr_type! Cancelling!")
+			exit;
+		}
+		
+		switch (self.intr_type) {
+			case "portal": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ portal!")
+				play_se_at(_intr.se, _intr.x, _intr.y)
+				break;
+			}
+			case "hidespot": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ hidespot!")
+	            play_se_at(_intr.se_in, _intr.x, _intr.y)
+	            _intr.shake = (20)
+				_intr.locked = !_intr.locked
+				_plr.hiding = !_plr.hiding
+				_plr.x = _intr.x
+				break;
+			}
+			case "itemspot": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ itemspot!")
+				play_se_at(_intr.se, _intr.x, _intr.y)
+				if (_intr.x == self.x) && (intr.y == self.y) // must be in same exact pos
+					instance_destroy(_intr.id)
+				break;
+			}
+			case "figure": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ figure!")
+				show_debug_message("Figure Interaction Handling is not integrated yet...")
+				break;
+			}
+			case "piano": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ piano!")
+	            play_se(_intr.se, 1)
+	            instance_destroy(_intr.id)
+				break;
+			}
+			case "hidebox": {
+				show_debug_message("PLAY_CB_INTERACT_AT: UUID " + string(self.uuid) + " Interacted w/ hidebox!")
+				if (_plr.hidebox == -4) {
+					_plr.hidebox = instance_create_depth(_plr.x, _plr.y, 0, obj_intr_hidebox)
+					play_se_at(_plr.hidebox.se_in, _plr.x, _plr.y)
+			        _plr.hidebox.shake = 20
+					_plr.hidebox.locked = 1
+			        _plr.hiding = 1
+				} else {
+					instance_destroy(_plr.hidebox)
+					_plr.hidebox = -4
+					_plr.hiding = 0
+				}
+			}
+		}
+	}
+}
+ds_map_add(global.packet_registry, 67, PLAY_CB_INTERACT_AT)
 
 /// @function do_packet
 /// @description Constructs and sends a packet. Argument1 is packet_id, rest of arguments are packet data (packet args for packet constructor)
@@ -1357,4 +1616,30 @@ function _cb_destroy_object(object_index) {
 	
 	show_debug_message("_cb_destroy_object (" + string(object_index) + ", " + string(object_get_name(object_index)) + ")")
 	do_packet(new PLAY_CB_DESTROY_OBJECT(object_index), struct_get_names(obj_multiplayer.network.players))
+}
+
+function timestop_change_event() {
+	show_debug_message("RUNNING TIMESTOP SET EVENT")
+	if is_multiplayer() {
+		if check_is_server()
+			do_packet(new PLAY_CB_SET_TIME_STOP(0, global.timeStop), struct_get_names(obj_multiplayer.server.clients))
+		else
+			do_packet(new PLAY_SB_SET_TIME_STOP(-1, global.timeStop), obj_multiplayer.network.server.connection)
+	}
+}
+
+function interact_event() {
+	show_debug_message("RUNNING INTERACT MULTIPLAYER EVENT")
+	if is_multiplayer() {
+		if !instance_exists(intrTarget)
+			exit;
+
+		var _intr_type = (intrTarget.object_index == obj_intr_hidebox) ? "hidebox" : intrTarget.type
+		show_debug_message("RUNNING INTERACT MULTIPLAYER EVENT, INTRTYPE IS " + string(_intr_type))
+		if check_is_server() {
+			do_packet(new PLAY_CB_INTERACT_AT(obj_multiplayer.server.player.entity_uuid, _intr_type, intrTarget.x, intrTarget.y, 0), struct_get_names(obj_multiplayer.server.clients))	
+		} else {
+			do_packet(new PLAY_SB_INTERACT_AT(-1, _intr_type, intrTarget.x, intrTarget.y), obj_multiplayer.network.server.connection)	
+		}
+	}
 }

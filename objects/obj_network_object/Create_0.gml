@@ -71,6 +71,7 @@ switch network_obj_type {
 		username = "USERNAME"
 		nametag = entity_uuid
 		player_sock = -1
+		hidebox = -4
 		break;	
 	}
 	//case "mob": {

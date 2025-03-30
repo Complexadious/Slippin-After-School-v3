@@ -39,9 +39,6 @@ if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game
 	process_id = ProcessExecuteAsync(command);
 }
 
-if keyboard_check_pressed(ord("J"))
-	do_packet(new PLAY_CB_CREATE_ENTITY(generate_uuid4_string(), obj_pkun.x, 0, obj_pkun.y, obj_pkun.dir, obj_hachi), struct_get_names(obj_multiplayer.server.clients))
-
 if keyboard_check_pressed(vk_f1) {  // reset and redownload all of the shit
 	check_web_asset_references()
 	if is_multiplayer()

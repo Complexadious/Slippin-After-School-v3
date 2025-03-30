@@ -1,6 +1,6 @@
 /// @description Insert description here
 // You can write your code in this editor
-if ((!game_is_paused()) && (!obj_pkun.timeStop))
+if ((!game_is_paused()) && (!global.timeStop))
 {
     dir = (-obj_pkun.dir)
     if ((distance_to_object(obj_pkun) > 1000))

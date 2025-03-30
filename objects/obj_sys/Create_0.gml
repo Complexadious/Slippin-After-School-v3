@@ -1,3 +1,6 @@
+global.timeStop = 0
+global.timeStopCanMove = 1
+
 global_bstep = {}
 
 global.multiplayer_packets_recieved = 0

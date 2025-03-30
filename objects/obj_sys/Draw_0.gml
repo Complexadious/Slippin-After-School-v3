@@ -329,7 +329,7 @@ if (global.dialog_mode && (global.clock_trans_t == -1))
                 if ((global.dialog_name != ""))
                 {
                     draw_set_color(make_color_rgb(100, 100, 100))
-                    draw_text((vx + 280), (vy + 530), (global.dialog_name + ":"))
+                    draw_text((vx + 280), (vy + 530), (string(global.dialog_name) + ":"))
                     draw_set_color(c_white)
                     ctext_draw((vx + 280), (vy + 570), global.dialog_line, dialog_char)
                 }

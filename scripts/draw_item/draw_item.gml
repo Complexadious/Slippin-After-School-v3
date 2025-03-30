@@ -67,12 +67,15 @@ function item_use() //gml_Script_item_use
     {
         global.trans_col = 16777215
         global.trans_alp = 1
-        timeStop = 300
+        global.timeStop = 300
+		global.timeStopCanMove = 1
         play_se(se_tiktok, 1)
+		timestop_change_event()
     }
     else if ((global.itemSlot[0] == 5))
     {
         intrTarget = instance_create_depth(x, y, 0, obj_intr_hidebox)
+		hidebox = intrTarget
         play_se(intrTarget.se_in, 1)
         intrTarget.shake = 20
         x = intrTarget.x
@@ -82,6 +85,7 @@ function item_use() //gml_Script_item_use
             if ((!target_is_near()) || (distance_to_object(obj_pkun) > 700))
                 lostTarget = 1
         }
+		interact_event()
     }
     else if ((global.itemSlot[0] == 6))
     {

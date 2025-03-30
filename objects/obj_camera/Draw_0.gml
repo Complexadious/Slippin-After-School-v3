@@ -149,7 +149,7 @@ if instance_exists(p)
             y = (p.y - 200)
         }
     }
-    if ((p.timeStop > 0))
+    if ((global.timeStop > 0))
     {
         draw_set_alpha(0.2)
         draw_set_color(make_color_rgb(255, 130, 0))
@@ -331,7 +331,7 @@ if instance_exists(p)
                 draw_sprite_ext_safe(spr_ui_battery, 0, (vx + 12), (vy + 598), 1, 1, 0, col, ui_alp)
         }
         draw_set_alpha(ui_alp)
-        if ((p.intrTarget != noone))
+        if ((p.intrTarget != noone)) && instance_exists(p.intrTarget)
         {
             draw_set_align(fa_center, fa_middle)
             draw_set_color(c_white)
