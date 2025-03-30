@@ -4,7 +4,7 @@ switch network_obj_type {
 	case "player": {
 		
 		// mimic some pkun variables
-		running = !(adjust_to_fps(abs(dx)) <= 6)
+		running = (abs(dx) > 4)
 		
 		var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true) || noclip
 		if can_move

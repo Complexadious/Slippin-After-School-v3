@@ -3,6 +3,7 @@
 
 // multiplayer stuff
 __cache = {}
+hidebox = -4
 
 flashOn = global.flashOn
 hscene_target = global.hscene_target

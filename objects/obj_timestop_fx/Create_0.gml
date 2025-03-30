@@ -4,7 +4,7 @@ time = 0
 
 timestop_duration = 0
 //if instance_exists(obj_pkun)
-//	timestop_duration = obj_pkun.timeStop
+//	timestop_duration = global.timeStop
 //else
 //	instance_destroy();
  

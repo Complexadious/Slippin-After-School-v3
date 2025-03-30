@@ -511,3 +511,27 @@ function array_without(array, value) {
 	}
 	return _arr
 }
+
+function play_se_at(se, x, y) {
+	if !instance_exists(obj_pkun) {
+		play_se(se, 1)
+		exit;
+	}
+    audio_falloff_set_model(4)
+	var _near = (!(collision_line(x, y, obj_pkun.x, obj_pkun.y, obj_wall, false, false)));
+    if _near
+    {
+        var _se = audio_play_sound_at(se, (obj_pkun.x + (obj_pkun.x - x)), y, 0, 100, 3000, 1, false, 1)
+        audio_sound_gain(_se, (global.vol_se / 100), 0)
+    }
+    else
+    {
+        var np = obj_pkun.np
+        var lp = obj_pkun.lp
+        if ((np != noone) && (lp != noone) && (!(collision_line(x, y, lp.x, lp.y, obj_wall, false, true))))
+        {
+            _se = audio_play_sound_at(se, (obj_pkun.x + (1.5 * ((obj_pkun.x - np.x) + (lp.x - x)))), ((obj_pkun.y - 1600) - (2 * abs((lp.x - x)))), 300, 100, 6000, 1.5, false, 1)
+            audio_sound_gain(_se, (global.vol_se / 100), 0)
+        }
+    }
+}

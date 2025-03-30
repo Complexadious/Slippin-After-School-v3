@@ -2,7 +2,7 @@
 // You can write your code in this editor
 vx = camera_get_view_x(view_camera[0])
 vy = camera_get_view_y(view_camera[0])
-if ((!global.menu_mode) && (!obj_pkun.timeStop))
+if ((!global.menu_mode) && (!global.timeStop))
 {
     if ((timer > 0))
     {

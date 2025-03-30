@@ -339,7 +339,7 @@ function hscene_animate(affect_client = 1) //gml_Script_hscene_animate
     }
     else
         hscene_end(affect_client)
-    if ((!global.dialog_mode) && keyboard_check_pressed(vk_return))
+    if ((!global.dialog_mode) && keyboard_check_pressed(vk_return)) && (object_index == obj_pkun)
     {
         hs_stp++
         hs_lp = -1

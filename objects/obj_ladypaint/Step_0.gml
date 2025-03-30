@@ -2,7 +2,7 @@ var current_target = get_closest_target(x, y, id)
 
 /// @description Insert description here
 // You can write your code in this editor
-if ((!game_is_paused()) && (!obj_pkun.timeStop) && (!police_stop()))
+if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
 {
 	if yy <= 0 && fall_timer > 0
 		fall_timer-= adjust_to_fps(1)

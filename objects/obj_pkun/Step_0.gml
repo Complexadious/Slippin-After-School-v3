@@ -17,7 +17,7 @@ if keyboard_check_pressed(ord("Y")) && global.game_debug
 var cam_target_is_pkun = instance_exists(obj_camera.camTarget) ? (!((obj_camera.camTarget != noone) && (obj_camera.camTarget.object_index != obj_pkun))) : 1
 
 // things that will force pkun to be frozen
-if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || !cam_target_is_pkun || (global.disable_game_keyboard_input)
+if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || !cam_target_is_pkun || (global.disable_game_keyboard_input) || (global.menu_mode)
 	global.pkun_frozen = 1
 else
 	global.pkun_frozen = 0
@@ -34,6 +34,9 @@ if (keyboard_check_pressed(ord("H")) && global.game_debug) && !global.disable_ga
 	global.flashPow = 100
 	stamina = 100
 }
+
+if (keyboard_check_pressed(ord("J")))
+	item_add(5)
 
 // some slide stuff
 if (sliding && !audio_is_playing(slideSound))
@@ -56,10 +59,10 @@ else if !sliding
 //}
 
 if (keyboard_check_pressed(ord("G")) && global.game_debug) && !global.disable_game_keyboard_input {
-	if timeStop > 0
-		timeStop = 0
+	if global.timeStop > 0
+		global.timeStop = 0
 	else
-		timeStop = infinity
+		global.timeStop = infinity
 }
 
 // make mobs target you if you speak!
@@ -73,7 +76,7 @@ if (global.speaking) && (distance_to_object(nearest) < 800) {
 if immortal = 0
 	immortal = 0.01
 
-//	instance_create_depth(x, y, depth, obj_timestop_fx)
+//	instance_create_depth(x, y, depth, obj_global.timeStop_fx)
 
 var nearest = (cam_target_is_pkun) ? instance_nearest(x, y, obj_interactable) : instance_nearest(obj_camera.camTarget.x, obj_camera.camTarget.y, obj_interactable)
 if global.trans_spd != adjust_to_fps(0.05)
@@ -150,7 +153,7 @@ if (!game_is_paused())
 		if keyboard_check(vk_left) && !global.pkun_frozen
 		{
 		    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
-		    var can_move = !collision_rectangle(x - move_speed, y - 1, x, y + 1, obj_wall, false, true) || noclip
+		    var can_move = (!collision_rectangle(x - move_speed, y - 1, x, y + 1, obj_wall, false, true) || noclip) && ((global.timeStop <= 0) || global.timeStopCanMove)
 		    //show_debug_message("L PKUN MOVE_SPEED = " + string(move_speed))
 		    if (can_move)
 		    {	
@@ -225,7 +228,7 @@ if (!game_is_paused())
 		else if keyboard_check(vk_right) && !global.pkun_frozen
 		{
 		    move_speed = adjust_to_fps(running ? 12 : 4) * speed_multiplier
-		    var can_move = !collision_rectangle(x, y - 1, x + move_speed, y + 1, obj_wall, false, true) || noclip
+		    var can_move = (!collision_rectangle(x, y - 1, x + move_speed, y + 1, obj_wall, false, true) || noclip) && ((global.timeStop <= 0) || global.timeStopCanMove)
 			//show_debug_message("R PKUN MOVE_SPEED = " + string(move_speed))
 		    if (can_move)
 		    {	
@@ -325,6 +328,7 @@ if (!game_is_paused())
                 if (adjust_to_fps(intrDone) >= adjust_to_fps(intrNeed))
                 {
 					sync_pkun_event()
+					interact_event()
 //					if is_multiplayer()
 //						send_client_interact_request_packet(intrTarget)
                     intrDone = 0
@@ -334,7 +338,7 @@ if (!game_is_paused())
 							play_se(intrTarget.se, 1)
 							global.transition = 1
 							portalPort = intrTarget.port
-							if (instance_number(obj_p_mob) > 0 && (!timeStop))
+							if (instance_number(obj_p_mob) > 0 && (!global.timeStop))
 	                        {
 	                            with (obj_p_mob)
 	                            {
@@ -344,8 +348,10 @@ if (!game_is_paused())
 								baldi_add_tracer()
 	                        }
 						} else {
-							with (obj_camera.camTarget)
-								mob_use_portal()
+							with (obj_camera.camTarget) {
+								if variable_instance_exists(id, "trace_i")
+									mob_use_portal()
+							}
 							keyboard_clear(vk_return)
 						}
                     }
@@ -416,13 +422,16 @@ if (!game_is_paused())
         {
             intrTarget.shake = (20)
             play_se(intrTarget.se_out, 1)
-			just_left_hide_spot = 5
+			interact_event()
         }
-        if (intrTarget.object_index == obj_intr_hidebox)
+        if (intrTarget.object_index == obj_intr_hidebox) && (hidebox != -4)
         {
-            with (intrTarget)
-                instance_destroy()
-            intrTarget = noone
+			if (intrTarget.id == hidebox.id) {
+	            with (intrTarget)
+	                instance_destroy()
+	            intrTarget = noone
+				hidebox = -4
+			}
         }
     }
     if (immortal > 0)
@@ -440,17 +449,17 @@ if (!game_is_paused())
         stamina = 100
     if (global.charmed > 0)
         global.charmed -= adjust_to_fps(0.05)
-    if (timeStop > 0)
+    if (global.timeStop > 0)
     {
-        timeStop-= adjust_to_fps(1)
-        if (timeStop == 0)
+        global.timeStop-= adjust_to_fps(1)
+        if (global.timeStop == 0)
         {
             global.trans_col = 16777215
             global.trans_alp = 1
         }
     }
     else
-        timeStop = 0
+        global.timeStop = 0
     if (room == rm_game)
     {
         if ((!hiding) && global.flashOn)
@@ -463,7 +472,7 @@ if (!game_is_paused())
                 global.flashOn = -1
             }
         }
-        if (!timeStop)
+        if (!global.timeStop)
         {
             clock_tick()
 			if (is_multiplayer()) {

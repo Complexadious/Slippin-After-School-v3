@@ -101,7 +101,7 @@ function police_stop() //gml_Script_police_stop
 
 function time_is_stopped()
 {
-	return (instance_exists(obj_pkun) && obj_pkun.timeStop > 0)	
+	return (instance_exists(obj_pkun) && global.timeStop > 0)	
 }
 
 function target_is_near_obj(arg0) //gml_Script_target_is_near_obj
