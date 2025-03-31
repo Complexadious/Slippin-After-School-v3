@@ -11,10 +11,10 @@ hs_hide_fl = global.hscene_hide_fl
 hscene_target = global.hscene_target
 hs_mob_id = (hscene_target != -4) ? global.hscene_target.mob_id : 0
 	
-if keyboard_check_pressed(ord("Y")) && global.game_debug
-	instance_create_depth(x, y, depth, obj_hachi)
-
 var cam_target_is_pkun = instance_exists(obj_camera.camTarget) ? (!((obj_camera.camTarget != noone) && (obj_camera.camTarget.object_index != obj_pkun))) : 1
+
+// constantly sync miniMsgStr
+update_pkun_mini_msg_event()
 
 // things that will force pkun to be frozen
 if ((global.hscene_target != noone) || global.ui_spectate_list_open) || (obj_camera.freecam) || !cam_target_is_pkun || (global.disable_game_keyboard_input) || (global.menu_mode)
@@ -28,14 +28,14 @@ if (obj_camera.freecam)
 else if (immortal = infinity)
 	immortal = 0
 
-if (keyboard_check_pressed(ord("H")) && global.game_debug) && !global.disable_game_keyboard_input
+if (keyboard_check_pressed(ord("H")) && global.game_debug && !global.disable_game_keyboard_input)
 {
 	global.lifeCur = 3
 	global.flashPow = 100
 	stamina = 100
 }
 
-if (keyboard_check_pressed(ord("J")))
+if (keyboard_check_pressed(ord("J")) && global.game_debug && !global.disable_game_keyboard_input)
 	item_add(5)
 
 // some slide stuff
@@ -43,20 +43,6 @@ if (sliding && !audio_is_playing(slideSound))
 	play_se(slideSound, 1)
 else if !sliding
 	audio_stop_sound(slideSound)
-
-//if keyboard_check_pressed(ord("T")) && global.game_debug && !global.disable_game_keyboard_input
-//{
-//	// Define the command for the executable
-//	var command;
-//	command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
-
-//	// Execute the program asynchronously
-//	var process_id;
-//	process_id = ProcessExecuteAsync(command);
-
-//	// Optionally, store the process ID for monitoring
-//	global.running_process_id = process_id;
-//}
 
 if (keyboard_check_pressed(ord("G")) && global.game_debug) && !global.disable_game_keyboard_input {
 	if global.timeStop > 0
@@ -383,7 +369,7 @@ if (!game_is_paused())
                             memo_get_random()
                         else
                         {
-                            miniMsgTmr = adjust_to_fps(300)
+                            miniMsgTmr = 300
                             miniMsgStr = getText("msg_fn")
                         }
                         with (intrTarget)
@@ -470,6 +456,7 @@ if (!game_is_paused())
             {
                 global.flashPow = 0
                 global.flashOn = -1
+				sync_flashlight_event()
             }
         }
         if (!global.timeStop)

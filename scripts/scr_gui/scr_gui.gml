@@ -232,6 +232,83 @@ function cmd_execute_command(input) {
 					msg = "Error: Command 'func', function '" + string(args[0]) + "' doesn't appear to exist."
 			}
 			break;	
+		} case "miniMsg": {
+			var min_args = 2
+			if (array_length(args) < min_args)
+			{
+				msg = "Error: Command 'miniMsg' not enough args. (msg, tmr)"
+				break;
+			}
+			else
+			{
+				// evaluate
+				var type_lists = ["real"]			
+				
+				var _eval = cmd_evaluate_args([args[1]], type_lists)
+				if (_eval[1] != "")
+					msg = "Command '" + command + "' " + _eval[1] // somethings wrong, its an error
+				else
+				{
+					obj_pkun.miniMsgStr = args[0]
+					obj_pkun.miniMsgTmr = eval[0][0]
+				}
+			}
+			exit; // so we dont log it in miniMsgStr
+		} case "join": {
+			var min_args = 3
+			if (array_length(args) < min_args)
+			{
+				msg = "Error: Command 'join' not enough args. (username, ip (XX.XX.XX.XX), port)"
+				break;
+			}
+			else
+			{
+				// evaluate
+				var type_lists = ["real"]		
+				show_debug_message("JOIN CMD ARGS: " + string(args))
+				
+				var _eval = cmd_evaluate_args([args[2]], type_lists)
+				if (_eval[1] != "")
+					msg = "Command '" + command + "' " + _eval[1] // somethings wrong, its an error
+				else
+				{
+					var _u = args[0]
+					var _ip = args[1]
+					var _port = _eval[0][0]
+					join_server(_u, _ip, _port)
+				}
+			}
+			break;	
+		} case "disconnect": {
+			leave_server("userInitiated")
+			if instance_exists(obj_multiplayer)
+				instance_destroy(obj_multiplayer);
+			break;	
+		} case "host": {
+			var min_args = 2
+			if (array_length(args) < min_args)
+			{
+				msg = "Error: Command 'host' not enough args. (username, port)"
+				break;
+			}
+			else
+			{
+				// evaluate
+				var type_lists = ["real"]		
+				show_debug_message("HOST CMD ARGS: " + string(args))
+				
+				var _eval = cmd_evaluate_args([args[1]], type_lists)
+				if (_eval[1] != "")
+					msg = "Command '" + command + "' " + _eval[1] // somethings wrong, its an error
+				else
+				{
+					var _u = args[0]
+					var _port = _eval[0][0]
+					start_server(_port)
+					obj_multiplayer.server.player.username = _u
+				}
+			}
+			break;	
 		}
 	}
 	// log

@@ -12,58 +12,72 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 			_log("Client (" + string(sock) + ") connected!")
 			
 			var _pid = struct_names_count(server.clients)
-			struct_set(server.clients, string(sock), _pid)
+			struct_set(server.clients, string(sock), "unsetUsername_" + string(_pid))
+			struct_set(network.players, server.clients[$ sock], generate_uuid4_string())
 //			add_timer(generate_uuid4_string(), adjust_to_fps(1), adjust_to_fps(900))
 			
 			// send packet back to client
-			var _entities = []
-			var _nos = struct_get_names(network.network_objects)
-			for (var i = 0; i < array_length(_nos); i++) {
-				with (network.network_objects[$ _nos[i]]) {
-					array_push(_entities, [entity_uuid, x, dx, y, dir, object_index])
-					var s = (struct_exists(self, "state")) ? state : 0
-					//do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, s, object_index), sock)
-					if object_index == obj_network_object
-						do_packet(new PLAY_CB_MOVE_PLAYER_POS(entity_uuid, x, dx, y, dir), sock)	
-				}
-			}
+			//if instance_exists(obj_pkun)
+			//	do_packet(new PLAY_CB_MOVE_PLAYER_POS(server.player.entity_uuid, obj_pkun.x, obj_pkun.dx, obj_pkun.y, obj_pkun.dir, obj_pkun.hiding), sock) // send server pkun
+			//do_packet(new PLAY_CB_DESTROY_OBJECT(obj_p_mob), sock) // get rid of existing mobs on connecting client
 			
-			do_packet(new PLAY_CB_DESTROY_OBJECT(obj_p_mob), sock)
-			if (array_length(_entities) > 0) {
-				//do_packet(new PLAY_CB_CREATE_ENTITIES(_entities), sock)
-				
-				//do_packet(new PLAY_CB_MOVE_ENTITY_POS(_entities.entity_uuid, _entities.x, _entities.dx, _entities.y, _entities.dir, _entities.object_index), sock)	
-			}
-				
-			//if !instance_exists(obj_network_object) {
+			//var _entities = []
+			//var _nos = struct_get_names(network.network_objects)
+			//for (var i = 0; i < array_length(_nos); i++) {
+			//	with (network.network_objects[$ _nos[i]]) {
+			//		if (!variable_struct_exists(self, "dx"))
+			//			continue;
+					
+			//		array_push(_entities, [entity_uuid, x, dx, y, dir, object_index])
+			//		var s = (struct_exists(self, "state")) ? state : 0
+			//		//do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, s, object_index), sock)
+			//		if (object_index == obj_network_object) {
+			//			// other players
+			//			do_packet(new PLAY_CB_MOVE_PLAYER_POS(entity_uuid, x, dx, y, dir, hiding), sock)	
+			//		} else {
+			//			// mobs
+			//			do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_uuid, x, dx, y, dir, state, object_index), sock)	
+			//		}
+			//	}
+			//}
+			
+			//// update hiding
+			//with (obj_interactable) {
+			//	if (type == "hidespot") && !(passenger == -4) {
+			//		do_packet(new PLAY_CB_INTERACT_AT(passenger.entity_uuid, type, x, y, 0), sock)	
+			//	}
+			//}
+
 			if is_undefined(sock_to_inst(sock)) {
 				_log("Client (" + string(sock) + ") doesn't have a network object. Adding one now.")
 				var no = instance_create_depth(-4, -4, 0, obj_network_object)
 				no.network_obj_type = "player"
-				no.entity_uuid = generate_uuid4_string()
-				struct_set(obj_multiplayer.network.players, sock, no.entity_uuid)
-				struct_set(obj_multiplayer.network.network_objects, no.entity_uuid, no.id)
+				no.entity_uuid = network.players[$ sock]
+				struct_set(network.network_objects, no.entity_uuid, no.id)
 				no.nametag = no.entity_uuid // self.sock
 				
-				var target_socks = array_without(struct_get_names(server.clients), sock)
+//				var target_socks = array_without(struct_get_names(server.clients), sock)
 				//do_packet(new PLAY_CB_CREATE_ENTITY(no.entity_uuid, -4, 0, -4, 0, no.object_index), target_socks)
 				//do_packet(new PLAY_CB_MOVE_ENTITY_POS()(no.entity_uuid, -4, 0, -4, 0, no.object_index), target_socks)
-				do_packet(new PLAY_CB_MOVE_ENTITY_POS(no.entity_uuid, no.x, no.dx, no.y, no.dir, 0, no.object_index), target_socks)
+//				do_packet(new PLAY_CB_MOVE_ENTITY_POS(no.entity_uuid, no.x, no.dx, no.y, no.dir, 0, no.object_index), target_socks)
 			}
-				
 			
-			//var buf = buffer_create(256, buffer_grow, 1)
-			//buffer_write(buf, buffer_string, "Connected to server!")
-			//network_send_packet(sock, buf, buffer_get_size(buf))
-			//buffer_delete(buf)
+			for (var i = 0; i < array_length(struct_get_names(server.clients)); i++) {
+				do_packet(generate_game_state_packet(struct_get_names(server.clients)[i]), struct_get_names(server.clients)[i]) //sock)
+			}
 			break;	
 		}
 		case network_type_disconnect: {
-			_log("Client (" + string(sock) + ") disconnected.")
+			var _msg = "Client (" + string(sock) + ") disconnected."
+			_log(_msg)
 			
-			if struct_exists(network.players, string(sock))
-				instance_destroy(sock_to_inst(string(sock)))
-			struct_remove(server.clients, string(sock))
+			if instance_exists(obj_pkun) {
+				obj_pkun.miniMsgStr = _msg
+				obj_pkun.miniMsgTmr = 300
+			}
+			
+			server_remove_player_inst(sock)
+			do_packet(new PLAY_CB_SET_PKUN_MINI_MSG(_msg, 300), struct_get_names(server.clients))
 			break;	
 		}
 		case network_type_data: {

@@ -508,6 +508,7 @@ function hscene_cum(affect_client = 1) //gml_Script_hscene_cum
 		sync_hscene_event()
 	} else {
 		hs_cum = 1
+		lifeCur--
 	}
 }
 

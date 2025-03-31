@@ -32,8 +32,8 @@
   "resourceVersion":"2.0",
   "solid":false,
   "spriteId":{
-    "name":"spr_efct_pant",
-    "path":"sprites/spr_efct_pant/spr_efct_pant.yy",
+    "name":"spr_error",
+    "path":"sprites/spr_error/spr_error.yy",
   },
   "spriteMaskId":null,
   "visible":true,

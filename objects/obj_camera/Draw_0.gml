@@ -221,35 +221,59 @@ if instance_exists(p)
 					// additional x offset for hearts and name tag so they appear centerd on pkun
 					var x_offset = (5 * dir)
 					
-					// draw hearts
-					var heart_scale = 0.33
-					var spr_width = sprite_get_width(spr_ui_heart) * heart_scale
-					var heart_padding = 20
-					var _ui_alp = 1
-//					var c_g = make_color_rgb(36, 36, 36)
-//					var c_p = make_color_hsv(225, (130 + (20 * global.shaderOn)), 255)
-					var start_x_offset = (((lifeMax * spr_width) + (lifeMax - 1 * heart_padding)) / 2)
-					if (dir == 1) start_x_offset -= (2 * x_offset)
-					var _vx = x - start_x_offset
-					var _vy = y - (sprite_height - 25)
-		
-					for (var l = 0; l < lifeMax; l++)
-				    {
-				        draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_g, _ui_alp)
-				        if ((l < lifeCur))
-				        {
-				            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_p, _ui_alp)
-				            //draw_sprite_part_ext(spr_ui_heart, (l % 2), _vx - (spr_width / 2), _vy - (spr_width / 2), spr_width, max(0, ((0.8125 * spr_width) - (((0.8125 * spr_width) * global.charmed) / 100))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + 4), (((_vy) - (spr_width / 2)) + 6), heart_scale, heart_scale, c_white, _ui_alp)
-							draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, (spr_width * 2.5), max(0, (2 * ((52 * heart_scale) - (((52 * heart_scale) * global.charmed) / 100)))) + (spr_width / 2), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + (4 * heart_scale)), (((_vy) - (spr_width / 2)) + (6 * heart_scale)), heart_scale, heart_scale, c_white, _ui_alp)
-							//draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, 64, max(0, (52 - ((52 * global.charmed) / 100))), ((((vx + 40) + (64 * l)) - 32) + 4), (((vy + 664) - 32) + 6), 1, 1, c_white, ui_alp)
+					// draw mini_msg_tmr
+					if ((miniMsgTmr > 0)) {
+						miniMsgAlp += (miniMsgAlp < 1) ? adjust_to_fps(miniMsgAlpAmt) : 0
+			            miniMsgTmr-= adjust_to_fps(1)
+			            draw_set_align(fa_center, fa_middle)
+			            setFont("B", 16)
+			            draw_text_blur(x, miniMsgY, miniMsgStr, miniMsgAlp)
+			        } else {
+						// decrease alp and stuff for nice effect
+						if (miniMsgAlp > 0) {
+							miniMsgAlp -= adjust_to_fps(miniMsgAlpAmt)
+							draw_set_align(fa_center, fa_middle)
+							setFont("B", 16)
+							draw_text_blur(x, miniMsgY, miniMsgStr, miniMsgAlp)
+						} else {
+							miniMsgStr = ""
+							miniMsgAlp = 0
 						}
-				        else if ((l == lifeCur) && (lifeloss_t > 0))
-				        {
-				            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), (2 - (lifeloss_t / 60)) * heart_scale, (2 - (lifeloss_t / 60)) * heart_scale, 0, c_white, (lifeloss_t / 60) * _ui_alp)
-				            lifeloss_t -= (lifeloss_t / 10)
-				        }
+						
+						if (global.draw_network_obj_hearts) {
+							// draw hearts
+							var heart_scale = 0.33
+							var spr_width = sprite_get_width(spr_ui_heart) * heart_scale
+							var heart_padding = 20
+							var _ui_alp = 1
+		//					var c_g = make_color_rgb(36, 36, 36)
+		//					var c_p = make_color_hsv(225, (130 + (20 * global.shaderOn)), 255)
+							var start_x_offset = (((lifeMax * spr_width) + (lifeMax - 1 * heart_padding)) / 2)
+							if (dir == 1) start_x_offset -= (2 * x_offset)
+							var _vx = x - start_x_offset
+							var _vy = nametag_y
+							
+							draw_set_alpha(1)
+		
+							for (var l = 0; l < lifeMax; l++)
+						    {
+						        draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_g, _ui_alp)
+						        if ((l < lifeCur))
+						        {
+						            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), heart_scale, heart_scale, 0, c_p, _ui_alp)
+						            //draw_sprite_part_ext(spr_ui_heart, (l % 2), _vx - (spr_width / 2), _vy - (spr_width / 2), spr_width, max(0, ((0.8125 * spr_width) - (((0.8125 * spr_width) * global.charmed) / 100))), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + 4), (((_vy) - (spr_width / 2)) + 6), heart_scale, heart_scale, c_white, _ui_alp)
+									draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, (spr_width * 2.5), max(0, (2 * ((52 * heart_scale) - (((52 * heart_scale) * global.charmed) / 100)))) + (spr_width / 2), ((((_vx) + (heart_padding * l)) - (spr_width / 2)) + (4 * heart_scale)), (((_vy) - (spr_width / 2)) + (6 * heart_scale)), heart_scale, heart_scale, c_white, _ui_alp)
+									//draw_sprite_part_ext(spr_ui_heart, (l % 2), 4, 6, 64, max(0, (52 - ((52 * global.charmed) / 100))), ((((vx + 40) + (64 * l)) - 32) + 4), (((vy + 664) - 32) + 6), 1, 1, c_white, ui_alp)
+								}
+						        else if ((l == lifeCur) && (lifeloss_t > 0))
+						        {
+						            draw_sprite_ext_safe(spr_ui_heart_mid, (l % 2), ((_vx) + (heart_padding * l)), (_vy), (2 - (lifeloss_t / 60)) * heart_scale, (2 - (lifeloss_t / 60)) * heart_scale, 0, c_white, (lifeloss_t / 60) * _ui_alp)
+						            lifeloss_t -= (lifeloss_t / 10)
+						        }
+							}
+						}
 					}
-					
+
 					// draw nametag
 					if (nametag != "") {
 						var sh = sprite_height
@@ -258,6 +282,11 @@ if instance_exists(p)
 	
 						var txtpad = 4;
 						var y_offset = -8;
+						
+						setFont("B", 16)
+						var mini_msg_ty = ((string_height(miniMsgStr) / 2) + miniMsgY)
+						var pad_btwn_mini = 10
+						var ny = nametag_y - (miniMsgAlp * abs(pad_btwn_mini - (abs(nametag_y) - abs(mini_msg_ty))))
 
 						draw_set_alpha(0.5);
 						draw_set_color(c_black);
@@ -265,13 +294,13 @@ if instance_exists(p)
 
 						var x1 = ((x - (string_width(nametag) / 2)) - txtpad) + x_offset
 						var x2 = (x1 + (string_width(nametag)) + (1.5 * txtpad))
-						var y1 = ((y - sprite_height) + y_offset) - ((string_height(nametag) / 2))
+						var y1 = (ny + y_offset) - ((string_height(nametag) / 2))
 						var y2 = (y1 + (string_height(nametag)))
 						draw_rectangle(x1, y1, x2, y2, 0);
 
 						draw_set_alpha(1);
 						draw_set_color(c_white);
-						draw_text(x + x_offset, (y - sprite_height) + y_offset, nametag);		
+						draw_text(x + x_offset, ny + y_offset, nametag);		
 					}
 				}
 			}

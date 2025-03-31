@@ -5,8 +5,10 @@ global_bstep = {}
 
 global.multiplayer_packets_recieved = 0
 global.multiplayer_packets_sent = 0
+global.disable_game_keyboard_input = 0
+global.draw_network_obj_hearts = 0
 
-global.multiplayer_pkun_sync_hist = [0, 0, 1, 0, 0, 0] // X, Y, DIR, HS_MOB_ID, HS_STP, HS_CHECK
+global.multiplayer_pkun_sync_hist = [0, 0, 1, 0, 0, 0, 0, 0, "", 0, 0] // X, Y, DIR, HS_MOB_ID, HS_STP, HS_CHECK, FLASH, FLASH_CHECK, MINI_MSG_STR, MINI_MSG_CHECK, HIDING
 global.multiplayer_check_sent_last_pkun_pos = 0 // when we stop moving, send last update packet to make sure other pkun stops moving
 global.skip_clock = 0
 

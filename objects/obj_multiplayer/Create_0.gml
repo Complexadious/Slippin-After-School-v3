@@ -190,7 +190,7 @@ network = {
 		// entity_uuid to inst
 	},
 	players: {
-		// sock to entity uuid	
+		// username to entity uuid	
 	}
 }
 
@@ -200,7 +200,7 @@ server = {
 	settings: {
 		game: {
 			tick_rate: 10, // Game tick rate per second
-			globals_to_sync: {} // Global variables to sync from server to client (server overwrites client)
+			globals_to_sync: ["clock_hr", "clock_tk", "clock_tk_spd", "clock_min"] // Global variables to sync from server to client (server overwrites client)
 		},
 		network: {
 			compress_packets: 0 // not added
@@ -210,7 +210,8 @@ server = {
 		mobs: {}
 	},
 	player: {
-		entity_uuid: generate_uuid4_string()	
+		entity_uuid: generate_uuid4_string(),
+		username: "unsetServerUsername"
 	}
 }
 
@@ -225,6 +226,10 @@ client = {
 	game: {
 		
 	},
+	player: {
+		entity_uuid: "",
+		username: ""
+	}
 }
 
 _log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {

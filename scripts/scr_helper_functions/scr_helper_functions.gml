@@ -1,8 +1,8 @@
 function log(msg, type = "INFO", src = "UNKNOWN") {
 	var _t = string_upper(string(type))
-	if !is_undefined(object_index)
+	if variable_instance_exists(id, "object_index")
 		src = (object_get_name(object_index))
-	var _ts = "[" + string(current_hour) + ":" + string(current_minute) + ":" + string(current_second) + "] "
+	var _ts = "[" + string(current_hour) + "H:" + string(current_minute) + "M:" + string(current_second) + "S:" + string(current_time) + "] "
 	show_debug_message(_ts + "[" + src + "/" + string(type) + "]: " + string(msg))	
 }
 
@@ -262,11 +262,14 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 			//make value[2] (dir) either a 1 or a 0
 			if (value[3] > 1) value[3] = 1;
 			if (value[3] < 0) value[3] = 0;
-//			//make value[4] (flash) either a 1 or a 0
-//			if (value[4] > 1) value[4] = 1;
-//			if (value[4] < 0) value[4] = 0;
 			
-			// X: 15 bits, Y: 14 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
+			/*
+			X: 14 bits (16384)
+			DX: 4 bits (16)
+			Y: 13 bits (8192)
+			DIR: 1 bit (1)
+			*/
+			
 			var total_bits = BP_DX_ALLOCATION + BP_Y_ALLOCATION + BP_DIR_ALLOCATION //+ BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
 			var _pos = int64(0)
 			var _x = int64(value[0]); _pos |= _x << (total_bits)
@@ -513,6 +516,10 @@ function array_without(array, value) {
 }
 
 function play_se_at(se, x, y) {
+	if (se == -4) {
+		show_debug_message("play_se_at(" + string(se) + ", " + string(x) + ", " + string(y)+ "): Attempted to play -4 as sound! Cancelling!")
+		exit;
+	}
 	if !instance_exists(obj_pkun) {
 		play_se(se, 1)
 		exit;
@@ -530,7 +537,7 @@ function play_se_at(se, x, y) {
         var lp = obj_pkun.lp
         if ((np != noone) && (lp != noone) && (!(collision_line(x, y, lp.x, lp.y, obj_wall, false, true))))
         {
-            _se = audio_play_sound_at(se, (obj_pkun.x + (1.5 * ((obj_pkun.x - np.x) + (lp.x - x)))), ((obj_pkun.y - 1600) - (2 * abs((lp.x - x)))), 300, 100, 6000, 1.5, false, 1)
+            var _se = audio_play_sound_at(se, (obj_pkun.x + (1.5 * ((obj_pkun.x - np.x) + (lp.x - x)))), ((obj_pkun.y - 1600) - (2 * abs((lp.x - x)))), 300, 100, 6000, 1.5, false, 1)
             audio_sound_gain(_se, (global.vol_se / 100), 0)
         }
     }
