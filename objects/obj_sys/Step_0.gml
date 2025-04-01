@@ -11,33 +11,22 @@ if (struct_names_count(global.targetting_cached) > 0) { // decrease or remove ex
 	}
 }
 
-//show_debug_message("CAN MOB MOVE: " + string(can_client_mob_move()))
-
-//show_debug_message("targetting timers = " + string(global.targetting_cached))
-// Toggle multiplayer menu with Y
-//if (keyboard_check_pressed(ord("Y")) && room == rm_title) {
-//    multiplayer_menu_open = !multiplayer_menu_open;
-//    username = "";
-//    server_ip = "";
-//    server_port = "";
-//    menu_focus = 0;
-//}
-if keyboard_check_pressed(ord("K")) {
+if keyboard_check_pressed(ord("K")) && !global.disable_game_keyboard_input {
 	room_goto(rm_game)
 	global.skip_clock = 1
 }
 
-if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game_keyboard_input
-{
-	// Define the command for the executable
-	var command;
-	//command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
-	command = program_directory + "\\Slippin After School v3.exe\""
+//if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game_keyboard_input
+//{
+//	// Define the command for the executable
+//	var command;
+//	//command = "\"C:\\Users\\proul\\Downloads\\AutoClicker-3.0.exe\"";
+//	command = program_directory + "\\Slippin After School v3.exe\""
 
-	// Execute the program asynchronously
-	var process_id;
-	process_id = ProcessExecuteAsync(command);
-}
+//	// Execute the program asynchronously
+//	var process_id;
+//	process_id = ProcessExecuteAsync(command);
+//}
 
 if keyboard_check_pressed(vk_f1) {  // reset and redownload all of the shit
 	check_web_asset_references()
@@ -54,10 +43,6 @@ if keyboard_check_pressed(vk_f2) {
 if keyboard_check_pressed(vk_home) {
 	sys_game_restart()	
 }
-
-//show_debug_message("web_asset_data.downloads: " + string(global.web_asset_data.downloads))
-//show_debug_message("web_asset_data.assets: " + string(global.web_asset_data.assets))
-//show_debug_message("web_asset_data.timers: " + string(global.web_asset_data.timers))
 
 // Things that disable general keyboard input for interactions and movement and such
 if (global.command_bar_open)
@@ -106,8 +91,13 @@ if (global.command_bar_open)
 		if (string_char_at(global.command_bar_content, 1) == "/") {
 			cmd_execute_command(string_delete(global.command_bar_content, 1, 1))
 			show_debug_message("COMMAND = '" + string_delete(global.command_bar_content, 1, 1) + "'")
-		} else
-			show_debug_message("NOT COMMAND, IS CHAT, MSG = " + global.command_bar_content)
+		} else {
+			show_debug_message("NOT COMMAND, IS CHAT, MSG = " + global.command_bar_content) 
+			with (obj_pkun) {
+				miniMsgStr = global.command_bar_content
+				miniMsgTmr = 300
+			}
+		}
 		if (global.command_bar_content != "") {
 			if (hist_len > 0) && (global.command_bar_content != global.command_bar_history[hist_len - 1])
 				array_push(global.command_bar_history, global.command_bar_content)

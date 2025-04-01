@@ -298,16 +298,16 @@ function key_pressed() //gml_Script_key_pressed
     global.key_delay = 12
 }
 
-function draw_text_blur(_arg0, _arg1, _arg2) //gml_Script_draw_text_blur
+function draw_text_blur(_arg0, _arg1, _arg2, _alp = 1) //gml_Script_draw_text_blur
 {
     draw_set_color(c_black)
-    draw_set_alpha(0.4)
+    draw_set_alpha(0.4 * _alp)
     draw_text((_arg0 - 2), (_arg1 - 2), _arg2)
     draw_text((_arg0 + 2), (_arg1 - 2), _arg2)
     draw_text((_arg0 - 2), (_arg1 + 2), _arg2)
     draw_text((_arg0 + 2), (_arg1 + 2), _arg2)
     draw_set_color(c_white)
-    draw_set_alpha(1)
+    draw_set_alpha(1 * _alp)
     draw_text(_arg0, _arg1, _arg2)
 }
 

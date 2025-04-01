@@ -12,6 +12,7 @@ lifeCur = global.lifeCur
 lifeMax = global.lifeMax
 charmed = global.charmed
 itemSlot = global.itemSlot
+dx = 0
 
 move_speed = 0
 

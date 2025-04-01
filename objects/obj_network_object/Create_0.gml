@@ -17,10 +17,6 @@ dx = 0
 dy = 0
 nametag = ""
 network_obj_type = "player"
-//if (self[$ "entity_uuid"] != "")
-//	entity_uuid = generate_uuid4_string()
-//else
-//	show_debug_message("OBJ_NETWORK_OBJECT, NOT MAKING NEW UUID, ALREADY EXISTS!")
 entity_uuid = ""
 
 switch network_obj_type {
@@ -50,7 +46,7 @@ switch network_obj_type {
 		stmRegen = 0
 		runCost = ((room == rm_game) ? 0.25 : 0)
 		pantDelay = 0
-		hscene_target = -4
+
 		intrTarget = -4
 		np = -4
 		lp = -4
@@ -61,17 +57,25 @@ switch network_obj_type {
 		soundDelay = 0
 		intrDone = -4
 		intrNeed = -4
-		pressing_interact = 0
+
 		lifeloss_t = 0
 		lifeMax = 3
 		lifeCur = 3
 		charmed = 0
 		immortal = 0
 		exhaust = 0
-		username = "USERNAME"
+		username = "unsetNetworkObjectUsername"
 		nametag = entity_uuid
+		nametag_y = (y - (sprite_height - 25))
+		
 		player_sock = -1
 		hidebox = -4
+		
+		miniMsgStr = ""
+		miniMsgTmr = 0
+		miniMsgAlp = 0
+		miniMsgAlpAmt = 0.12
+		miniMsgY = (y - (sprite_height - 25)) - 5
 		break;	
 	}
 	//case "mob": {
