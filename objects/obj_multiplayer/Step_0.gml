@@ -22,9 +22,12 @@ for (var _i = array_length(_tmrs) - 1; _i >= 0; _i--) {
 
 if (loc[$ "MULTIPLAYER_LOG_TMR"].curr == 1) {
 	var __msg = "General Info"
-	if check_is_server()
+	if check_is_server() {
 		__msg+= "\n	- Clients = " + string(struct_get_names(server.clients))
-	else
-		__msg+= "\n	- Network Objects (players) = " + string(struct_get_names(network.entities))
+		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
+	} else {
+		__msg+= "\n	- Players = " + string(struct_get_names(network.players))
+		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
+	}
 	_log(__msg)	
 }

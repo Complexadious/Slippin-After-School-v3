@@ -17,7 +17,7 @@ posyq = array_create(2)
 dx = 0
 dy = 0
 nametag = ""
-network_obj_type = network_obj_type ?? "player"
+network_obj_type = "player"
 entity_uuid = ""
 
 switch network_obj_type {
@@ -65,8 +65,8 @@ switch network_obj_type {
 		charmed = 0
 		immortal = 0
 		exhaust = 0
-		username = username ?? "unsetNetworkObjectUsername"
-		nametag = nametag ?? username
+		username = "unsetNetworkObjectUsername"
+		nametag = username
 		nametag_y = (y - (sprite_height - 25))
 		
 		player_sock = -1

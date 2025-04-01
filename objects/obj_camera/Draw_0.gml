@@ -136,7 +136,7 @@ if instance_exists(p)
 				camTarget.controlled = (camTarget.controlled == 0) ? -1 : 0
 				if (!check_is_server()) && (is_multiplayer()) {
 					// send request to control anyways
-					do_packet(new PLAY_SB_SET_ENTITY_CONTROL(-1, camTarget.entity_uuid, abs(camTarget.controlled)), obj_multiplayer.network.server.connection)
+					do_packet(new PLAY_SB_SET_ENTITY_CONTROL(-1, camTarget.entity_id, abs(camTarget.controlled)), obj_multiplayer.network.server.connection)
 				}
 			}
         }

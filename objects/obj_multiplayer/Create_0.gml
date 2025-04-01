@@ -180,6 +180,9 @@ PLAY_PACKET = {
 network = {
 	role: NETWORK_ROLE.CLIENT,
 	connection_state: CONNECTION_STATE.OFFLINE,
+	connection_state_data: {
+		connect_rid: -1	
+	},
 	server: {
 		socket: -1,
 		connection: -1,
@@ -197,15 +200,13 @@ network = {
 		/* player_id (PID) -> player constructor {
 			username: "sigma",
 			entity: entity constructor
-			network_state: 0-4
-			network_role: NETWORK_ROLE.CLIENT or NETWORK_ROLE.SERVER
 		} */
 	}
 }
 
 // Server Data
 server = {
-	clients: {}, // sock -> pid
+	clients: {}, // sock -> {pid, connection_state, role}
 	settings: {
 		game: {
 			tick_rate: 10, // Game tick rate per second
@@ -246,7 +247,7 @@ add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
 
 // actual game shit
 // client
-add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), 60, [sync_pkun_event, []], 1, 0)
+//add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), 60, [sync_pkun_event, []], 1, 0)
 
 // Server
 //add_timer("CB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), (60 / client.settings.game.tick_rate), [_cb_sync_pkun, []], 1, 0)

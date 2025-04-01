@@ -177,7 +177,7 @@ function portal_linked(argument0) //gml_Script_portal_linked
 		{
 	        with (obj_intr_portal)
 	        {
-	            if ((id != argument0) && (port == argument0.port))
+//	            if ((id != argument0) && (port == argument0.port))
 	                return id;
 	        }
 		}

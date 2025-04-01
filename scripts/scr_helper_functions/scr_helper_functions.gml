@@ -109,6 +109,14 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
     switch type {
 		case undefined: {
 			// assume the next byte is the ID
+			
+			// check if we are still within bounds
+			var _buffsize = buffer_get_size(buffer_id)
+			if (buffer_tell(buffer_id) >= _buffsize ) {
+				show_debug_message("TRIED READING OUTSIDE OF BUFFER RANGE!!!!! WTF!!!!!")
+				exit;	
+			}
+			
 			var _byte = buffer_read(buffer_id, BUFFER_DT_ID_TYPE)
 			var _id = id_to_datatype(_byte)
 //			show_debug_message("buffer_read_ext: type is undefined. read dt id is " + string(_id) + ", _byte is " + string(_byte))
@@ -273,7 +281,7 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 			var total_bits = BP_DX_ALLOCATION + BP_Y_ALLOCATION + BP_DIR_ALLOCATION //+ BP_AW_ALLOCATION + BP_FLASH_ALLOCATION
 			var _pos = int64(0)
 			var _x = int64(value[0]); _pos |= _x << (total_bits)
-			var _dx = int64(value[1]); total_bits -= BP_DX_ALLOCATION; _pos |= _dx << (total_bits)
+			var _dx = int64(abs(value[1])); total_bits -= BP_DX_ALLOCATION; _pos |= _dx << (total_bits)
 			var _y = int64(value[2]); total_bits -= BP_Y_ALLOCATION; _pos |= _y << (total_bits)
 			var _dir = int64(value[3]); total_bits -= BP_DIR_ALLOCATION; _pos |= _dir << (total_bits)
 //			var _aw = int64(value[3]); total_bits -= BP_AW_ALLOCATION; _pos |= _aw << (total_bits)

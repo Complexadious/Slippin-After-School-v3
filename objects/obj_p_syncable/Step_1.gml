@@ -8,8 +8,8 @@
 
 ////show_debug_message("Inst vars and vals for object " + string(object_get_name(object_index)) + ":\n- vars: " + string(inst_vars) + "\n-vals: " + string(inst_vals))
 
-if (object_index != obj_pkun) && (can_client_mob_move())
-	dx = 0
+//if (object_index != obj_pkun) && (can_client_mob_move())
+//	dx = 0
 	
 // update last pos
 last.x = x
