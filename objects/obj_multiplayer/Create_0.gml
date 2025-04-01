@@ -1,3 +1,7 @@
+#macro logInfoType "INFO"
+#macro logWarningType "WARNING"
+#macro logErrorType "ERROR"
+
 #macro BUFFER_SEGMENT_BITS 0x7F
 #macro BUFFER_CONTINUE_BIT 0x80
 #macro buffer_custom_datatype_start 32
@@ -186,30 +190,33 @@ network = {
 	},
 //	client: {},
 	statistics: {},
-	network_objects: {
-		// entity_uuid to inst
+	entities: {
+		// entity_id (EID) -> entity constructor
 	},
 	players: {
-		// username to entity uuid	
+		/* player_id (PID) -> player constructor {
+			username: "sigma",
+			entity: entity constructor
+			network_state: 0-4
+			network_role: NETWORK_ROLE.CLIENT or NETWORK_ROLE.SERVER
+		} */
 	}
 }
 
 // Server Data
 server = {
-	clients: {},
+	clients: {}, // sock -> pid
 	settings: {
 		game: {
 			tick_rate: 10, // Game tick rate per second
 			globals_to_sync: ["clock_hr", "clock_tk", "clock_tk_spd", "clock_min"] // Global variables to sync from server to client (server overwrites client)
-		},
-		network: {
-			compress_packets: 0 // not added
 		}
 	},
 	game: {
 		mobs: {}
 	},
 	player: {
+		pid: 0,
 		entity_uuid: generate_uuid4_string(),
 		username: "unsetServerUsername"
 	}
@@ -223,16 +230,15 @@ client = {
 			tick_rate: 10 // Game tick rate per second
 		},
 	},
-	game: {
-		
-	},
+	game: {},
 	player: {
+		pid: -1,
 		entity_uuid: "",
 		username: ""
 	}
 }
 
-_log = function(msg = "??EMPTY_MESSAGE??", type = "INFO", show_on_screen = 0) {
+_log = function(msg = "??EMPTY_MESSAGE??", type = logInfoType, show_on_screen = 0) {
 	log("[" + ((network.role == NETWORK_ROLE.SERVER) ? "SERVER" : "CLIENT") + "]: " + msg, type)
 }
 

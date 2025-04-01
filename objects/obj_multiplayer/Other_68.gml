@@ -22,9 +22,9 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 			//do_packet(new PLAY_CB_DESTROY_OBJECT(obj_p_mob), sock) // get rid of existing mobs on connecting client
 			
 			//var _entities = []
-			//var _nos = struct_get_names(network.network_objects)
+			//var _nos = struct_get_names(network.entities)
 			//for (var i = 0; i < array_length(_nos); i++) {
-			//	with (network.network_objects[$ _nos[i]]) {
+			//	with (network.entities[$ _nos[i]]) {
 			//		if (!variable_struct_exists(self, "dx"))
 			//			continue;
 					
@@ -53,7 +53,7 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 				var no = instance_create_depth(-4, -4, 0, obj_network_object)
 				no.network_obj_type = "player"
 				no.entity_uuid = network.players[$ sock]
-				struct_set(network.network_objects, no.entity_uuid, no.id)
+				struct_set(network.entities, no.entity_uuid, no.id)
 				no.nametag = no.entity_uuid // self.sock
 				
 //				var target_socks = array_without(struct_get_names(server.clients), sock)

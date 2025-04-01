@@ -487,7 +487,7 @@ function mob_find_portal() //gml_Script_mob_find_portal
 
 function mob_wander(argument0) //gml_Script_mob_wander
 {
-	if !check_is_server()
+	if (is_multiplayer()) && (!check_is_server())
 		exit;
 	
     var d = 0

@@ -1,9 +1,9 @@
-function log(msg, type = "INFO", src = "UNKNOWN") {
+function log(msg, type = logInfoType, src = "UNKNOWN") {
 	var _t = string_upper(string(type))
-	if variable_instance_exists(id, "object_index")
+	if ((self) && (struct_exists(self, "object_index")))
 		src = (object_get_name(object_index))
 	var _ts = "[" + string(current_hour) + "H:" + string(current_minute) + "M:" + string(current_second) + "S:" + string(current_time) + "] "
-	show_debug_message(_ts + "[" + src + "/" + string(type) + "]: " + string(msg))	
+	show_debug_message(_ts + "[" + src + "] [" + string(type) + "]: " + string(msg))	
 }
 
 function flip_bool(argument0) {
@@ -541,4 +541,8 @@ function play_se_at(se, x, y) {
             audio_sound_gain(_se, (global.vol_se / 100), 0)
         }
     }
+}
+
+function create_event_var_is_unset(variable) {
+	return (variable_instance_exists(id, variable)) ? is_undefined(struct_get(self, variable)) : 1
 }

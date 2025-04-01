@@ -19,5 +19,5 @@ if (controlled == -1) {
 }
 
 var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true)
-if ((can_move) && (controlled != -1)) // only apply dx for the client, fucks up server one
-	x += (check_is_server() && (controlled == 0)) ? 0 : dx
+if ((can_move) && !(can_client_mob_move())) // only apply dx for the client, fucks up server one
+	x += dx

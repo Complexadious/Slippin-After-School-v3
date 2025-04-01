@@ -1,21 +1,6 @@
-/// @description Insert description here
-// You can write your code in this editor
-entity_uuid = generate_uuid4_string()
+dir = dir ?? 1
+dx = dx ?? 0
 
-excluded_vars = [
-	"x",
-	"y",
-	"dir",
-	"id",
-	"sprite_index",
-	"excluded_vars",
-	"inst_vars",
-	"inst_vals",
-	"diff_vars_and_vals",
-	"allowed_datatypes"
-]
-
-inst_vars = []
-inst_vals = []
-diff_vars_and_vals = []
-allowed_datatypes = ["number", "string", "array", "bool"]
+show_debug_message("syncable inst created (" + string(object_get_name(object_index)) + ")")
+__entity = new entity(x, y, dir, object_index, depth)
+__entity.attach(id)

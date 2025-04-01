@@ -18,8 +18,8 @@
     "path":"folders/Objects.yy",
   },
   "parentObjectId":{
-    "name":"obj_mob_targettable",
-    "path":"objects/obj_mob_targettable/obj_mob_targettable.yy",
+    "name":"obj_p_syncable",
+    "path":"objects/obj_p_syncable/obj_p_syncable.yy",
   },
   "persistent":false,
   "physicsAngularDamping":0.1,

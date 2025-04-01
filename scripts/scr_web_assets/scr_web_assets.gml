@@ -48,10 +48,10 @@ function asset_type_exists(asset_type) {
 
 function ref_web_asset(alias_or_source, asset_type, flags = {}) {
 	var fallback = web_fallback_asset(asset_type)
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/ref_web_asset")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/ref_web_asset")}
 	
 	if !asset_type_exists(asset_type)
-		__log("Cannot reference web_asset '" + string(alias_or_source) + "' since asset_type '" + string(asset_type) + "' doesn't exist.", "WARNING")
+		__log("Cannot reference web_asset '" + string(alias_or_source) + "' since asset_type '" + string(asset_type) + "' doesn't exist.", logWarningType)
 	
 	// check if asset exists or not
 	if (alias_to_asset(alias_or_source) == noone) && (source_to_asset(alias_or_source) == noone) {
@@ -110,7 +110,7 @@ function source_to_asset(source) {
 
 function check_web_asset_references() {
 	var assets = struct_get_names(global.web_asset_data.assets)
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/check_web_asset_references")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/check_web_asset_references")}
 	
 	for (var i = 0; i < array_length(assets); i++) {
 		var asset = global.web_asset_data.assets[$ assets[i]]
@@ -120,12 +120,12 @@ function check_web_asset_references() {
 		if script_exists(func)
 			script_execute(func, asset)
 		else
-			__log("Asset_type '" + string(asset.asset_type) + "' doesn't have a valid SAVE handler for it's web asset '" + string(asset.alias) + "'", "WARNING")
+			__log("Asset_type '" + string(asset.asset_type) + "' doesn't have a valid SAVE handler for it's web asset '" + string(asset.alias) + "'", logWarningType)
 	}	
 }
 
 function web_asset_data_init() {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_data_init")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_data_init")}
 	__log("Init stage ran for Web Asset System.")
 	
 	if !instance_exists(obj_web_asset_manager) {
@@ -256,12 +256,12 @@ function web_fallback_asset(asset_type) {
 
 function web_asset(_source, _asset_type, _alias = _source) constructor {
 	var possible_asset_types = struct_get_names(global.web_asset_data.asset_types)
-	var __log = function(msg, type = "INFO") {log(msg, type, "CONSTRUCTOR/web_asset")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "CONSTRUCTOR/web_asset")}
 	if !array_contains(possible_asset_types, _asset_type)
 		show_error("Error constructing web_asset: Provided asset_type (" + string(_asset_type) +") is invalid. Possible asset types are: " + string(possible_asset_types), 1)
 	
 	if !string_starts_with(_source, "http://") && !string_starts_with(_source, "https://") {
-		__log("Source doesn't start with HTTP or HTTPS! (web_asset '" + string(_alias) + "')", "WARNING")
+		__log("Source doesn't start with HTTP or HTTPS! (web_asset '" + string(_alias) + "')", logWarningType)
 		_source = string_insert(_source, "http://", 0)
 	}
 	
@@ -278,14 +278,14 @@ function web_asset(_source, _asset_type, _alias = _source) constructor {
 /// @description Constructs a new web_asset, use ref_web_asset(alias OR source, asset_type) to use it.
 
 function create_web_asset(source, asset_type, alias = source, flags = {}) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/create_web_asset")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/create_web_asset")}
 	
 	if (alias == noone || alias == -4 || alias == "")
 		alias = source
 		
 	// check if its a valid asset_type
 	if !asset_type_exists(asset_type) {
-		__log("Can't create web_asset '" + string(alias) + "', asset_type '" + string(asset_type) + "' doesn't exist!", "ERROR")
+		__log("Can't create web_asset '" + string(alias) + "', asset_type '" + string(asset_type) + "' doesn't exist!", logErrorType)
 		exit;
 	}
 	
@@ -303,7 +303,7 @@ function create_web_asset(source, asset_type, alias = source, flags = {}) {
 	}
 	
 	if (array_length(required_flags) > 0) { // we are missing flags
-		__log("Can't create web_asset '" + string(alias) + "', missing flags: " + string(required_flags), "ERROR")
+		__log("Can't create web_asset '" + string(alias) + "', missing flags: " + string(required_flags), logErrorType)
 		exit;
 	}
 
@@ -359,7 +359,7 @@ function dfile(_url, _file_path, _flags = {}) constructor {
 /// @description Queues a file to download within obj_web_asset_manager
 
 function download_file(url, file_path, flags = {}) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/download_file")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/download_file")}
     if !instance_exists(obj_web_asset_manager) {
         var inst = instance_create_depth(0, 0, 999, obj_web_asset_manager)
         __log("Created obj_web_asset_manager instance, INST: (" + string(inst) + ")")
@@ -386,9 +386,9 @@ function web_asset_is_downloaded_file_valid(asset) {
 
 	// delete file (should be used for all types)
 function web_asset_delete_source_file_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_delete_source_file_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_delete_source_file_handler")}
 	if !struct_exists(global.web_asset_data.downloads, asset.source) {
-		__log("Web asset '" + string(asset.alias) + "' source file '" + string(asset.source) + "' wasn't found in global.web_asset_data.downloads!", "WARNING")
+		__log("Web asset '" + string(asset.alias) + "' source file '" + string(asset.source) + "' wasn't found in global.web_asset_data.downloads!", logWarningType)
 		return 0	
 	}
 	
@@ -398,25 +398,25 @@ function web_asset_delete_source_file_handler(asset) {
 		file_delete(fp)
 		__log("Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' AND download struct were deleted!")
 	} else
-		__log("Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' wasn't found or doesn't exist! Download struct was still deleted!", "WARNING")
+		__log("Web asset '" + string(asset.alias) + "' source's local file '" + string(asset.source) + "' wasn't found or doesn't exist! Download struct was still deleted!", logWarningType)
 	struct_remove(global.web_asset_data.downloads, asset.source)
 	return 1
 }
 
 	// sprite
 function web_asset_sprite_save_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sprite_save_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_sprite_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		asset.reference = sprite_add(path, 0, false, false, 0, 0)
 		__log("Created sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'")
 	}
 	else
-		__log("Unable to create sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'", "WARNING")
+		__log("Unable to create sprite reference for web asset '" + string(asset.alias) + "' from image file at '" + string(path) + "'", logWarningType)
 }
 
 function web_asset_sprite_delete_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sprite_delete_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_sprite_delete_handler")}
 	var suffix = ""
 	
 	// delete asset
@@ -437,18 +437,18 @@ function web_asset_sprite_delete_handler(asset) {
 
 	// sound
 function web_asset_sound_save_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sound_save_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_sound_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		asset.reference = audio_create_stream(path)
 		__log("Created audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'")
 	}
 	else
-		__log("Unable to create audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'", "WARNING")
+		__log("Unable to create audio stream for web asset '" + string(asset.alias) + "' from sound file at '" + string(path) + "'", logWarningType)
 }
 
 function web_asset_sound_delete_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_sound_delete_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_sound_delete_handler")}
 	var suffix = ""
 	
 	// delete asset
@@ -459,7 +459,7 @@ function web_asset_sound_delete_handler(asset) {
 			suffix += " AND web_sound (" + _r + ")"
 		} else {
 			suffix += " BUT NOT web_sound (" + _r + ")"
-			__log("Couldn't delete web asset_sound '" + string(asset.alias) + "'!", "WARNING")
+			__log("Couldn't delete web asset_sound '" + string(asset.alias) + "'!", logWarningType)
 		}
 	}
 	
@@ -475,7 +475,7 @@ function web_asset_sound_delete_handler(asset) {
 
 	// text
 function web_asset_text_save_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_text_save_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_text_save_handler")}
 	var path = web_asset_is_downloaded_file_valid(asset)
 	if (path != 0) && !is_undefined(path) {
 		var file = file_bin_open(path, 0)
@@ -484,11 +484,11 @@ function web_asset_text_save_handler(asset) {
 		__log("Got web text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'")
 	}
 	else
-		__log("Unable to getweb  text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'", "WARNING")
+		__log("Unable to getweb  text for web asset '" + string(asset.alias) + "' from text file at '" + string(path) + "'", logWarningType)
 }
 
 function web_asset_text_delete_handler(asset) {
-	var __log = function(msg, type = "INFO") {log(msg, type, "FUNC/web_asset_text_delete_handler")}
+	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/web_asset_text_delete_handler")}
 	var suffix = ""
 	
 	// delete web asset local downloaded file

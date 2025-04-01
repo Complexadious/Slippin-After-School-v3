@@ -50,7 +50,7 @@ if (global.command_bar_open)
 	}
 }
 
-if ((keyboard_check(vk_tab)) && instance_exists(obj_p_mob)) && global.game_debug
+if ((keyboard_check(vk_tab)) && global.game_debug)
 {
 	draw_ui_mob_spectate_list()
 	global.ui_spectate_list_open = 1

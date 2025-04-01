@@ -15,11 +15,12 @@ state = 0
 controlled = 0
 move_speed = 0
 
-entity_uuid = (check_is_server()) ? generate_uuid4_string() : ""
-if ((entity_uuid != "") && (is_multiplayer()))
-	struct_set(obj_multiplayer.network.network_objects, entity_uuid, id)
+entity_uuid = "" //(check_is_server()) ? generate_uuid4_string() : ""
+//if ((entity_uuid != "") && (is_multiplayer()))
+//	struct_set(obj_multiplayer.network.entities, entity_uuid, id)
 	
 bstep_pos = [-4, -4, 1, 0]
 _pcnt = 0
 
-_cb_create_entity(entity_uuid, x, dx, y, dir, object_index)
+//_cb_create_entity(entity_uuid, x, dx, y, dir, object_index)
+event_inherited()

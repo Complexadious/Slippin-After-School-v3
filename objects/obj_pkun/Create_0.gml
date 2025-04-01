@@ -94,3 +94,5 @@ speed_multiplier = 1
 //sliding_se_in = se_slide_in
 //sliding_se_during = se_slide_during
 //sliding_se_out = se_sliding_out
+
+event_inherited()

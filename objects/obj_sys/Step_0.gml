@@ -16,6 +16,16 @@ if keyboard_check_pressed(ord("K")) && !global.disable_game_keyboard_input {
 	global.skip_clock = 1
 }
 
+if keyboard_check_pressed(ord("Y")) && instance_exists(obj_pkun) && !global.disable_game_keyboard_input {
+	show_debug_message("SYS, RUNNING CREATE PLAYER!")
+	global.player = new player_entity("testusernameorsum", obj_pkun.x, obj_pkun.y, obj_pkun.dir)
+	global.player.create()
+}
+
+if keyboard_check_pressed(ord("C")) && !global.disable_game_keyboard_input && global.game_debug {
+	global.cowardOn = flip_bool(global.cowardOn)
+}
+
 //if keyboard_check_pressed(ord("L")) && global.game_debug && !global.disable_game_keyboard_input
 //{
 //	// Define the command for the executable

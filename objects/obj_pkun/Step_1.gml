@@ -10,3 +10,4 @@
 //hscene_target = global.hscene_target
 //hs_mob_id = instance_exists(hscene_target) ? global.hscene_target.mob_id : 0
 //*/
+event_inherited()

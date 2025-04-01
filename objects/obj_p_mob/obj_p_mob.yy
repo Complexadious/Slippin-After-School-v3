@@ -17,7 +17,10 @@
     "name":"mobs",
     "path":"folders/Objects/mobs.yy",
   },
-  "parentObjectId":null,
+  "parentObjectId":{
+    "name":"obj_p_syncable",
+    "path":"objects/obj_p_syncable/obj_p_syncable.yy",
+  },
   "persistent":false,
   "physicsAngularDamping":0.1,
   "physicsDensity":0.5,

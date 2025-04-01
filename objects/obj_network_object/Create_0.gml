@@ -1,6 +1,7 @@
 /// @description Insert description here
 // You can write your code in this editor
 show_debug_message("obj_network_object: CREATED!!")
+
 dir = 1
 
 intrTarget = portal_nearest()
@@ -16,7 +17,7 @@ posyq = array_create(2)
 dx = 0
 dy = 0
 nametag = ""
-network_obj_type = "player"
+network_obj_type = network_obj_type ?? "player"
 entity_uuid = ""
 
 switch network_obj_type {
@@ -64,8 +65,8 @@ switch network_obj_type {
 		charmed = 0
 		immortal = 0
 		exhaust = 0
-		username = "unsetNetworkObjectUsername"
-		nametag = entity_uuid
+		username = username ?? "unsetNetworkObjectUsername"
+		nametag = nametag ?? username
 		nametag_y = (y - (sprite_height - 25))
 		
 		player_sock = -1
@@ -85,6 +86,6 @@ switch network_obj_type {
 
 // save id to network shit
 //if is_multiplayer()
-//	struct_set(obj_multiplayer.network.network_objects, entity_uuid, id)
+//	struct_set(obj_multiplayer.network.entities, entity_uuid, id)
 	
 show_debug_message("obj_network_object: CREATED!! uuid: " + entity_uuid)
