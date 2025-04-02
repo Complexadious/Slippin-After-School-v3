@@ -38,17 +38,22 @@ for (var i = 0; i < array_length(_entities); i++) {
 		_ls.dir = dir
 		
 		if !(check_is_server()) && (other.network.server.connection > -1) && (object_index == obj_pkun) { // only sync client pkun
+			show_debug_message("sending PLAY_CB_MOVE_PLAYER_POS to server")
 			do_packet(new PLAY_SB_MOVE_PLAYER_POS(-1, x, cdx, y, dir, hiding), other.network.server.connection)
+			show_debug_message("DONE sending PLAY_CB_MOVE_PLAYER_POS to server")
 			exit; // we did pkun, skip others
 		} else if check_is_server() {
 			var _t = struct_get_names(other.server.clients)
 			var _state = variable_struct_exists(id, "state") ? state : 0
 			if ((object_index == obj_pkun) || (object_index == obj_network_object)) {
 				_t = array_without(_t, string(pid_to_sock(player_id)))
-				show_debug_message("sending play_cb_move_play_pos to every sock except " + string(string(pid_to_sock(player_id))))
-				do_packet(new PLAY_CB_MOVE_PLAYER_POS(player_id, x, cdx, y, dir, hiding), _t)	
+				show_debug_message("sending PLAY_CB_MOVE_PLAYER_POS to every sock except " + string(string(pid_to_sock(player_id))))
+				do_packet(new PLAY_CB_MOVE_PLAYER_POS(player_id, x, cdx, y, dir, hiding), _t)
+				show_debug_message("DONE sending PLAY_CB_MOVE_PLAYER_POS to every sock except " + string(string(pid_to_sock(player_id))))
 			} else {
+				show_debug_message("sending PLAY_CB_MOVE_ENTITY_POS to " + string(_t))
 				do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_id, x, cdx, y, dir, _state, object_index), _t)
+				show_debug_message("DONE sending PLAY_CB_MOVE_ENTITY_POS to " + string(_t))
 			}
 		}
 	}

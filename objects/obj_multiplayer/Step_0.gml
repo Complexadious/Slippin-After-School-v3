@@ -18,7 +18,6 @@ for (var _i = array_length(_tmrs) - 1; _i >= 0; _i--) {
 	}
 }
 
-//show_debug_message("TIMERS: " + string(network.timers))
 
 if (loc[$ "MULTIPLAYER_LOG_TMR"].curr == 1) {
 	var __msg = "General Info"
@@ -29,5 +28,7 @@ if (loc[$ "MULTIPLAYER_LOG_TMR"].curr == 1) {
 		__msg+= "\n	- Players = " + string(struct_get_names(network.players))
 		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
 	}
+	__msg += "\n - TIMERS: " + string(network.timers)
 	_log(__msg)	
+
 }

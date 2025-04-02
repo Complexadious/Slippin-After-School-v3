@@ -50,6 +50,12 @@ if keyboard_check_pressed(vk_f2) {
 	join_server()	
 }
 
+if keyboard_check_pressed(vk_f3) {
+	if is_multiplayer() {
+		do_packet(new PLAY_CB_SET_HSCENE(1, 4, 0, se_catch, 1, 1), string(1))	
+	}
+}
+
 if keyboard_check_pressed(vk_home) {
 	sys_game_restart()	
 }

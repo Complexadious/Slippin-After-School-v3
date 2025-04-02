@@ -35,3 +35,5 @@ else if (role == "hanako") {
     global.trans_alp = 1;
     global.trans_col = 0;
 }
+
+event_inherited()

@@ -407,11 +407,11 @@ function rand_hse(argument0, argument1) //gml_Script_rand_hse
 }
 
 function hscene_snd_at(argument0, argument1, argument2) //gml_Script_hscene_snd_at
-{
+{	
     if ((!hs_snd_delay) && (floor(hs_ind) == argument2))
     {
         hs_snd_delay = (1 / hs_spd)
-        play_se(argument0, argument1)
+        play_se_at(argument0, x, y)
         hs_snd_prev = argument0
         var efct = instance_create_depth((x + (irandom_range(120, 150) * hs_snd_efct)), (y - irandom_range(30, 150)), -9999999, obj_efct_sfx)
         with (efct)

@@ -40,6 +40,14 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 				obj_pkun.miniMsgTmr = 300
 			}
 			
+			var _tn = (string(sock) + "_SEND_KEEPALIVE_TIMER")
+			if struct_exists(network.timers, _tn) {
+				struct_remove(network.timers, _tn)
+				packetLog("Removed '" + _tn + "' timer.")
+			} else {
+				packetLog("No '" + _tn + "' timer to remove?", "WARNING")
+			}
+			
 			//server_disconnect(sock)
 			server_remove_player_inst(sock)
 			do_packet(new PLAY_CB_SET_PKUN_MINI_MSG(_msg, 300), struct_get_names(server.clients))

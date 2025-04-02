@@ -73,7 +73,7 @@ if (global.show_mob_traces)
 {
 	var prefix = "obj_sys Step: (Rendering Mob Traces) "
 	
-	var variables_to_display = ["object_index", "x", "y", "dir", "state", "trace_x", "trace_y", "move_speed", "last_move_speed", "dx", "entity_uuid"]
+	var variables_to_display = ["x", "y", "state", "trace_x", "trace_y", "move_speed", "dx", "entity_id"]
 	
 	var close_color = c_green
 	var far_color = c_red
@@ -174,6 +174,31 @@ if (global.show_mob_traces)
 		+ "\n- prog_to_target_x = " + string(prog_to_target_x)
 		
 //		show_debug_message(msg)
+	}
+	
+	with (obj_network_object)
+	{
+		variables_to_display = ["x", "y", "dx", "entity_id"]
+		var y_offset = -(sprite_get_width(sprite_index) / 2)
+		draw_set_alpha(alp)
+		draw_line_width(x, (y + y_offset) - 50, x + (dir * 100), (y + y_offset) - 50, thickness * c_zoom) // draw dir line
+		draw_set_color(c_gray)
+		draw_line_width(x, (y + y_offset), x, (y + y_offset) - sprite_get_height(sprite_index), thickness * c_zoom) // height line
+		
+		// render text above mob
+		var txt_x_offset = 0 //(sprite_get_width(sprite_index) / 2)
+		var txt_y_offset = -(sprite_get_height(sprite_index) / 2)
+		var _text = "[" + object_get_name(object_index) + "]\n"
+		
+		for (var j = 0; j < array_length(variables_to_display); j++) {
+			var variable = variables_to_display[j]
+			var val = (variable_instance_exists(id, variable)) ? self[$ variable] : "N/A"
+			_text += (variables_to_display[j] + " = " + string(val) + "\n")
+		}
+		draw_set_color(c_white)
+		draw_set_font(fnt_minecraft)
+		draw_set_align(fa_left, fa_top)
+		draw_text((x + txt_x_offset), (y + txt_y_offset), _text)
 	}
 }
 

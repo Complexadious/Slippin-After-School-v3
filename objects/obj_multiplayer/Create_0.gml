@@ -245,6 +245,7 @@ _log = function(msg = "??EMPTY_MESSAGE??", type = logInfoType, show_on_screen = 
 
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
 
+
 // actual game shit
 // client
 //add_timer("SB_CLIENT_PKUN_UPDATE", adjust_to_fps(1), 60, [sync_pkun_event, []], 1, 0)
