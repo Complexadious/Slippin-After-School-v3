@@ -15,9 +15,9 @@ logType = {
 	},
 }
 
-global.mob_sight_range = 1000
+global.mob_sight_range = 4000
 global.mob_reaction_time = 15
-global.mob_force_switch_target_range = 600
+global.mob_force_switch_target_range = 2000
 global.mob_updates_to_clients_on_different_floors = 0
 
 global.timeStop = 0
@@ -287,7 +287,7 @@ addSetting("Debug", "Show Mob Traces", "show_mob_traces", 1, "DebugSettings.ini"
 addSetting("Debug", "Mob Trace Count", "mob_trace_count", 4, "DebugSettings.ini", {type: "range", askConfirm: 0, minNum: 0, maxNum: 100, keyDelay: 1, changeRate: 1})
 addSetting("Debug", "Mob Trace Forget Chance (%)", "mob_trace_forget_chance", 30, "DebugSettings.ini", {type: "range", askConfirm: 0, minNum: 0, maxNum: 100, keyDelay: 0, changeRate: 5})
 addSetting("Graphics", "Censor", "enable_nsfw", 0, "Graphics_Settings.ini", {type: "bool", askConfirm: 1, sett_v_cases: [[0, "Enabled"], [1, "Disabled"]]})
-addSetting("Graphics", "Censor Mode", "nsfw_censor_mode", 30, "Graphics_Settings.ini", {type: "range", askConfirm: 0, minNum: 0, maxNum: 2, keyDelay: 1, sett_v_cases: [[0, "Box"], [1, "Outline"], [2, "Alt Sprite"]]})
+addSetting("Graphics", "Censor Mode", "nsfw_censor_mode", 0, "Graphics_Settings.ini", {type: "range", askConfirm: 0, minNum: 0, maxNum: 2, keyDelay: 1, sett_v_cases: [[0, "Box"], [1, "Outline"], [2, "Alt Sprite"]]})
 
 // get rid of nsfw stuff just in case
 global.nsfw_sprites = [

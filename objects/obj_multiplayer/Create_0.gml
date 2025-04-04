@@ -211,7 +211,7 @@ server = {
 	settings: {
 		game: {
 			tick_rate: 10, // Game tick rate per second
-			globals_to_sync: ["clock_hr", "clock_tk", "clock_tk_spd", "clock_min"] // Global variables to sync from server to client (server overwrites client)
+			globals_to_sync: [] //["clock_hr", "clock_tk", "clock_tk_spd", "clock_min"] // Global variables to sync from server to client (server overwrites client)
 		}
 	},
 	game: {

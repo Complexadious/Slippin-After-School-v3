@@ -10,13 +10,36 @@ function closest_floor_target() {
 		for (var i = array_length(_players) - 1; i >= 0 ; i--) {
 			var _pid = _players[i]
 			var _player_inst = pid_to_inst(_pid)
+			var _diffy = abs(other.y - _player_inst.y)
 			if (_curr_flr == get_floor(_player_inst.y)) {
 				var _dist = abs(other.x - _player_inst.x)
-				if (_dist > global.mob_sight_range)
+				if (_dist > global.mob_sight_range) && (_diffy < 25) // keep target on diff floor diff y 
 					continue; // only allow ones within range
 				struct_set(_targets, string(_dist), _player_inst.id)
 				array_push(_dists, _dist)
 			}
+		}
+		
+		// see who's closest
+		var _closest = _targets[$ string(script_execute_ext(min, _dists))] ?? obj_pkun
+		return _closest
+	}
+	return obj_pkun
+}
+
+function closest_target_thru_walls() {
+	var _targets = {}
+	var _dists = []
+	
+	with (obj_multiplayer) {
+		var _players = struct_get_names(network.players)
+		
+		// gather all players
+		for (var i = array_length(_players) - 1; i >= 0 ; i--) {
+			var _player_inst = pid_to_inst(_players[i])
+			var _dist = abs(other.x - _player_inst.x)
+			struct_set(_targets, string(_dist), _player_inst.id)
+			array_push(_dists, _dist)
 		}
 		
 		// see who's closest
@@ -79,13 +102,6 @@ function mob_set_dir(new_dir, force = 0) {
 
 // Require the caller to pass in its current x and y
 function get_closest_target(_x, _y, _id = noone) {
-	// return the stuff within the timers
-	//if (_id != noone) {
-	//	if !struct_exists(global.targetting_cached, _id)
-	//		struct_set(global.targetting_cached, (_id), [global.targetting_update_tmr_dur, target_nearest(_x, _y)])
-	//	return (global.targetting_cached[$ _id][1] == 0) ? obj_pkun : global.targetting_cached[$ _id][1]
-	//}
-	//return target_nearest(_x, _y);
 	return obj_pkun
 }
 
@@ -140,17 +156,9 @@ function target_is_near_obj(arg0) //gml_Script_target_is_near_obj
 
 function target_is_near() //gml_Script_target_is_near
 {
-	if !variable_instance_exists(id, "current_target") {
-		current_target = obj_pkun	
-	}
-	
-	var _speaking_exception = (global.speaking && (distance_to_object(current_target) < 650))
-	if (_speaking_exception) {
-		show_debug_message("target_is_near: Speaking Exception active. Pkun is forced to be near!")
-		return 1
-	} else {
-		return (!(collision_line(x, y, current_target.x, current_target.y, obj_wall, false, false))) || (global.speaking && (distance_to_object(current_target) < 650))
-	}
+	if !instance_exists(current_target)
+		current_target = obj_pkun
+	return (!(collision_line(x, y, current_target.x, current_target.y, obj_wall, false, false))) || (global.speaking && (distance_to_object(current_target) < 650))
 }
 
 function hanako_hide() //gml_Script_hanako_hide
@@ -360,7 +368,7 @@ function pkun_spawn_mob() //gml_Script_pkun_spawn_mob
 function mob_play_ds(argument0) //gml_Script_mob_play_ds
 {
     audio_falloff_set_model(4)
-    if target_is_near()
+    if target_is_near() && (abs(current_target.y - y) < 25)
     {
         var se = audio_play_sound_at(argument0, (obj_pkun.x + (obj_pkun.x - x)), y, 0, 100, 3000, 1, false, 1)
         audio_sound_gain(se, (global.vol_se / 100), 0)
@@ -379,8 +387,8 @@ function mob_play_ds(argument0) //gml_Script_mob_play_ds
 
 function mob_init_trace() //gml_Script_// mob_init_trace
 {
-	if struct_exists(global.targetting_cached, id)
-		exit;
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_init_trace")}
+	_log("Trace init ran!")	
 	
 	trace_i = -1
 	trace_p = -1
@@ -391,11 +399,12 @@ function mob_init_trace() //gml_Script_// mob_init_trace
 	    trace_x[i] = -1
 	    trace_y[i] = -1
 	}
-
 }
 
 function mob_track_trace() //gml_Script_mob_track_trace
 {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_track_trace")}
+//	_log("Trace track ran!")
     if ((trace_i > -1) && (trace_i < global.mob_trace_count) && (trace_x[trace_i] != 0) && (trace_x[trace_i] != -1))
     {
         if ((abs((x - trace_x[trace_i])) < 50) && (abs((y - trace_y[trace_i])) < 100))
@@ -405,16 +414,29 @@ function mob_track_trace() //gml_Script_mob_track_trace
     }
     else
     {
-        show_debug_message("mob lost trace! \n- trace_i = " + string(trace_i))
+        _log("Mob lost trace! Reasons:")
+		if !(trace_i > -1)
+			_log("\n- Variable 1 '(trace_i > -1)' is '" + string((trace_i > -1)) + "'")
+        else {
+			if !(trace_i < global.mob_trace_count)
+				_log("- Variable 2 '(trace_i < global.mob_trace_count)' is '" + string((trace_i < global.mob_trace_count)) + "'")
+	        if !(trace_x[trace_i] != 0)
+				_log("- Variable 3 '(trace_x[trace_i] != 0)' is '" + string((trace_x[trace_i] != 0)) + "'")
+	        if !(trace_x[trace_i] != -1)
+				_log("- Variable 4 '(trace_x[trace_i] != -1)' is '" + string((trace_x[trace_i] != -1)) + "'")
+		}
         mob_set_state(1)
+		_log("lostTarget = 1 due to mob lost trace?")
         lostTarget = 1
         mob_wander(0)
-//        // mob_init_trace()
+		mob_init_trace()
     }
 }
 
 function mob_add_trace() //gml_Script_mob_add_trace
 {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_add_trace")}
+	_log("Trace add ran!")
 	// var current_target = get_closest_target(x, y, id)
     if ((state == (2)) && (!lostTarget))// && (global.mob_trace_count > 0)
     {
@@ -440,6 +462,7 @@ function mob_add_trace() //gml_Script_mob_add_trace
                 i++
         }
     }
+	_log("Trace add trace_i = " + string(trace_i))
 }
 
 function point_near_portal(_x, _y, dist) {
@@ -453,10 +476,24 @@ function point_near_portal(_x, _y, dist) {
 
 function mob_use_portal() //gml_Script_mob_use_portal
 {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_use_portal")}
+	_log("Mob use portal ran!")	
+	
+	if (current_target == -4 || is_undefined(current_target)) || !instance_exists(current_target) {
+		_log("Mob use portal: Current target is fucked up - defaulting to obj_pkun! (" + string(current_target) + ")", logType.error.not_found)
+		current_target = obj_pkun
+	}
+	
 	// var current_target = get_closest_target(x, y, id)
     var in = instance_nearest(x, y, obj_intr_portal)
     var lp = current_target.lp
     trace_p = in.port
+	
+	if (lp == -4) || (is_undefined(lp)) || !instance_exists(lp) {
+		_log("Mob use portal: Current target lp is fucked up - defaulting to closest portal near target!! (" + string(lp) + ")", logType.error.not_found)
+		lp = instance_nearest(current_target.x, current_target.y, obj_intr_portal)
+	}
+	
     with (obj_intr_portal)
     {
         if ((other.trace_p == port))
@@ -491,6 +528,9 @@ function mob_use_portal() //gml_Script_mob_use_portal
 
 function mob_find_portal() //gml_Script_mob_find_portal
 {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_find_portal")}
+	_log("Mob find portal ran!")	
+	
     var list = ds_list_create()
     var portal = noone
     var result = 0
@@ -519,6 +559,9 @@ function mob_wander(argument0) //gml_Script_mob_wander
 {
 	if (is_multiplayer()) && (!check_is_server())
 		exit;
+	
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_wander")}
+	_log("Mob wander ran!")	
 	
     var d = 0
     var len = 0

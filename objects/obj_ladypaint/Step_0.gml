@@ -69,7 +69,7 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
                 var list = ds_list_create()
                 with (obj_lp_sp)
                 {
-                    if ((distance_to_object(current_target) > 2000) || (!target_is_near()))
+                    if ((distance_to_object(other.current_target) > 2000) || (!target_is_near()))
                         ds_list_add(list, id)
                 }
                 to = ds_list_find_value(list, irandom((ds_list_size(list) - 1)))

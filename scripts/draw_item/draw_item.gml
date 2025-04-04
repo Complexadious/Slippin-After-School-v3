@@ -82,7 +82,7 @@ function item_use() //gml_Script_item_use
         hiding = 1
         with (obj_p_mob)
         {
-            if ((!target_is_near()) || (distance_to_object(obj_pkun) > 700))
+            if ((!target_is_near()) || (distance_to_object(current_target) > 700))
                 lostTarget = 1
         }
 		interact_event()

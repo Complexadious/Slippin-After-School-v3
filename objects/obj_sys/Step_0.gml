@@ -1,16 +1,5 @@
 // multiplayer stuff
 	// targetting stuff
-if (struct_names_count(global.targetting_cached) > 0) { // decrease or remove expired timers
-	var _t = struct_get_names(global.targetting_cached)
-
-	for (var l = array_length(_t) - 1; l >= 0; l--) {
-		if (global.targetting_cached[$ _t[l]][0] > 0)
-			global.targetting_cached[$ _t[l]][0]-= adjust_to_fps(1) //(target_is_near_obj(real(_t[l]))) ? adjust_to_fps(5) : adjust_to_fps(1)
-		else
-			struct_remove(global.targetting_cached, _t[l])
-	}
-}
-
 if keyboard_check_pressed(ord("K")) && !global.disable_game_keyboard_input {
 	room_goto(rm_game)
 	global.skip_clock = 1

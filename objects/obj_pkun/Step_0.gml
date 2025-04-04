@@ -352,11 +352,9 @@ if (!game_is_paused())
                         hiding = 1
                         with (obj_p_mob)
                         {
-							// var current_target = get_closest_target(x, y, id)
-							
                             if doTrack
                             {
-                                if ((!target_is_near()) || distance_to_object(obj_pkun) > 700)
+                                if ((!target_is_near()) || distance_to_object(current_target) > 700)
                                     lostTarget = 1
                             }
                         }
@@ -492,7 +490,7 @@ if (global.hscene_target != noone)
     }
 	
 	if (global.hscene_target != {"mob_id": hs_mob_id}) {
-		show_debug_message("HSCENE UPDATED")
+		
 		hs_mob_id = global.hscene_target.mob_id
 		instance_destroy(global.hscene_target)
 		global.hscene_target = {"mob_id": hs_mob_id}

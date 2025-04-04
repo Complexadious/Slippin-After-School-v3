@@ -7,6 +7,12 @@ switch network_obj_type {
 		running = (adjust_to_fps(abs(dx)) > 4)
 		nametag_y = (y - (sprite_height - 25))
 		miniMsgY = (y - (sprite_height - 25))
+		var n = (noclip) ? obj_intr_portal : portal_nearest(id)
+		if (np != n)
+		{
+		    np = n
+		    lp = (noclip) ? -4 : portal_linked(n)
+		}
 		
 		var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true) || noclip
 		if can_move

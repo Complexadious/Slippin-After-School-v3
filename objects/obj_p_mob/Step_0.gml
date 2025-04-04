@@ -38,7 +38,11 @@ if ((can_move) && !(can_client_mob_move())) // only apply dx for the client, fuc
 // global.mob_reaction_time = 15
 // global.mob_force_switch_target_range = 600
 
-
-closest_target = closest_floor_target()
-target_x = closest_target.x
-show_debug_message(object_get_name(object_index) + " closest_target = '" + string(closest_target) + "'")
+if (closest_target_curr > 0)
+	closest_target_curr-= adjust_to_fps(1)
+else
+{
+	closest_target_curr = closest_target_tmr
+	current_target = closest_floor_target()
+//	show_debug_message(object_get_name(object_index) + " updated current_target = '" + string(current_target) + "'")
+}

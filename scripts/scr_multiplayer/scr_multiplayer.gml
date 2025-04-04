@@ -167,9 +167,11 @@ function server_remove_player_inst(sock) {
 	
 	if (_es != noone) && (_es != -4) && (struct_exists(_es, "destroy")) {
 		_es.destroy()
-	} else {
+	} else if (_es != -4) {
 		_log("Can't find sock's entity struct (" + string(_es) + ") or it doesn't contain a 'destroy' method?", logType.error.not_found)
 		do_packet(new PLAY_CB_DESTROY_ENTITY(_es.entity_id), struct_get_names(obj_multiplayer.server.clients))
+	} else {
+		_log("_es evaluated to '" + string(_es) + "'", logType.error.not_found)	
 	}
 	if struct_exists(network.entities, _eid)
 		struct_remove(network.entities, _eid)
@@ -2137,6 +2139,20 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructo
 			case "portal": {
 				packetLog("SOCK " + string(self.sock) + " Interacted w/ portal!")
 				play_se_at(_intr.se, _intr.x, _intr.y)
+				
+				// add tracers if needed
+				if (instance_number(obj_p_mob) > 0 && (!global.timeStop))
+				{
+					packetLog("SOCK " + string(self.sock) + " gonna add tracer for portal interaction")
+					with (obj_p_mob)
+					{
+						if doTrack
+							mob_add_trace()
+					}
+					baldi_add_tracer()
+				} else {
+					packetLog("SOCK " + string(self.sock) + " not adding tracer?")	
+				}
 				
 				// get all entities on same floor and send them to player so it is seamless
 				var _player_floor = get_floor(sock_to_inst(self.sock).y)

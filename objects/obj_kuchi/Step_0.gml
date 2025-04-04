@@ -31,7 +31,7 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) || actor
             soundDelay = 10
             mob_play_ds(se_step)
         }
-        if (target_is_near() && (!((current_target.hiding && lostTarget))))
+        if (target_is_near() && (!((current_target.hiding && lostTarget)))) && (abs(current_target.y - y) < 25) // y must match?
         {
             target_x = current_target.x
             lostTarget = 0

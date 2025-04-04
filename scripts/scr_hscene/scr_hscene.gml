@@ -435,11 +435,11 @@ function hscene_end(affect_client = 1) //gml_Script_hscene_end
 {	
     if (!global.game_is_over) && affect_client
     {
-		if check_is_server() {
+		if (is_multiplayer() && check_is_server()) {
 			instance_destroy(global.hscene_target)
 			global.hscene_target = -4
 		}
-		else
+		else if (!is_multiplayer())
 			instance_destroy(obj_p_mob)
         global.hscene_target = -4
         global.trans_alp = 1
