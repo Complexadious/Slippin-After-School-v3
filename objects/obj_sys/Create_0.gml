@@ -1,3 +1,22 @@
+globalvar logType;
+logType = {
+	info: {
+		def :"INFO"
+	},
+	warning: {
+		def: "WARNING",
+		deprecated: "WARNING DEPRECATED",
+		server_action_as_client: "WARNING SERVER_ACT_AS_CLIENT",
+		not_multiplayer: "WARNING NOT_MULTIPLAYER"
+	},
+	error: {
+		def: "ERROR",
+		not_found: "ERROR NOT_FOUND"
+	},
+}
+
+global.mob_updates_to_clients_on_different_floors = 0
+
 global.timeStop = 0
 global.timeStopCanMove = 1
 

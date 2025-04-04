@@ -24,9 +24,11 @@ if (loc[$ "MULTIPLAYER_LOG_TMR"].curr == 1) {
 	if check_is_server() {
 		__msg+= "\n	- Clients = " + string(struct_get_names(server.clients))
 		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
+		__msg+= "\n	- PPS = " + string(network.statistics.pps)
 	} else {
 		__msg+= "\n	- Players = " + string(struct_get_names(network.players))
 		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
+		__msg+= "\n	- PPS = " + string(network.statistics.pps)
 	}
 	__msg += "\n - TIMERS: " + string(network.timers)
 	_log(__msg)	

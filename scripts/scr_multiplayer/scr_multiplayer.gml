@@ -10,18 +10,42 @@ function _client(_sock, _username, _status, _data = {}) constructor {
 	status = _status
 }
 
-function remove_timer(uuid, run_expiration_func = 0) {
-	if struct_exists(obj_multiplayer.network.timers.path, uuid)	{
+function remove_timer(name, run_expiration_func = 0) {
+	if struct_exists(obj_multiplayer.network.timers, name)	{
 		if (run_expiration_func)
-			obj_multiplayer.network.timers.path[$ uuid].curr = 0
+			obj_multiplayer.network.timers[$ name].curr = 0
 		else 
-			struct_remove(obj_multiplayer.network.timers.path, uuid)
+			struct_remove(obj_multiplayer.network.timers, name)
 	}
 }
 
 function add_timer(uuid, _decrease_amt, _dur, _func = undefined, _loop = 0, _remove_on_expiration = 1) {
 	var tmr = new multiplayer_timer(_decrease_amt, _dur, _func, _loop, _remove_on_expiration)
 	struct_set(obj_multiplayer.network.timers, uuid, tmr)
+}
+
+function dt_wrapper(data, type) {
+	self.__data_type = type
+	self.__data = data
+}
+
+function is_dt_wrapper(value) {
+	if !(typeof(value) == "struct")
+		return 0
+	else if (struct_exists(value, "__data_type")) && struct_exists(value, "__data")
+		return 1
+	else
+		return 0
+}
+
+function generate_eid() {
+	if !instance_exists(obj_multiplayer)
+		return -1
+	_eid = (MAX_CLIENTS + 1)
+	while (array_contains(struct_get_names(obj_multiplayer.network.entities), _eid)) {
+		_eid++		
+	}
+	return _eid
 }
 
 /// @function multiplayer_timer
@@ -41,7 +65,7 @@ function multiplayer_timer(_decrease_amt, _dur, _func = undefined, _loop = 0, _r
 }
 
 function start_server(port = SERVER_PORT) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/start_server")}
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/start_server")}
 	
 	if !instance_exists(obj_multiplayer) {
 		instance_create_depth(0, 0, 999, obj_multiplayer)
@@ -50,7 +74,7 @@ function start_server(port = SERVER_PORT) {
 	
 	with (obj_multiplayer) {
 		if (network.server.socket > 0) {
-			__log("Tried to start already running server. NETWORK_SOCKET_ID: " + string(network.server.socket), logWarningType)	
+			__log("Tried to start already running server. NETWORK_SOCKET_ID: " + string(network.server.socket), logType.warning.def)	
 		}
 		
 		// Create server
@@ -64,7 +88,7 @@ function start_server(port = SERVER_PORT) {
 }
 
 function join_server(username = "joinserverUnsetUsername", ip = "127.0.0.1", port = SERVER_PORT) {
-	var _log = function(msg, type = logInfoType) {log(msg, type, "FUNC/join_server")}
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/join_server")}
 	
 	if !instance_exists(obj_multiplayer) {
 		instance_create_depth(0, 0, 999, obj_multiplayer)
@@ -97,7 +121,10 @@ function join_server(username = "joinserverUnsetUsername", ip = "127.0.0.1", por
 }
 
 function leave_server(reason) {
-	var _log = function(msg, type = logInfoType) {log(msg, type, "FUNC/leave_server")}
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/leave_server")}
+	
+	_log("TRIED TO LEAVE SERVER, REASON = " + string(reason))
+	exit;
 	
 	instance_destroy(obj_network_object);	
 	instance_destroy(obj_p_mob);	
@@ -127,7 +154,7 @@ function pid_to_eid(pid) {
 }
 
 function server_remove_player_inst(sock) {
-	var _log = function(msg, type = logInfoType) {log(msg, type, "FUNC/server_remove_player_inst")}
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/server_remove_player_inst")}
 //	var _pid = string(obj_multiplayer.server.clients[$ sock].pid)
 	if !check_is_server()
 		exit; // only as server dumbass
@@ -138,10 +165,10 @@ function server_remove_player_inst(sock) {
 	var _eid = pid_to_eid(_pid)
 	var _es = eid_to_entity_struct(_eid)
 	
-	if (_es != noone) && (struct_exists(_es, "destroy")) {
+	if (_es != noone) && (_es != -4) && (struct_exists(_es, "destroy")) {
 		_es.destroy()
 	} else {
-		_log("Can't find sock's entity struct (" + string(_es) + ") or it doesn't contain a 'destroy' method?", "WARNING")
+		_log("Can't find sock's entity struct (" + string(_es) + ") or it doesn't contain a 'destroy' method?", logType.error.not_found)
 		do_packet(new PLAY_CB_DESTROY_ENTITY(_es.entity_id), struct_get_names(obj_multiplayer.server.clients))
 	}
 	if struct_exists(network.entities, _eid)
@@ -172,7 +199,7 @@ function server_remove_player_inst(sock) {
 }
 
 function close_server() {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/start_server")}
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/start_server")}
 	__log("Attempting to close server...")
 	if !instance_exists(obj_multiplayer)
 		return 1
@@ -207,8 +234,18 @@ function check_is_server() {
 }
 
 function multiplayer_send_packet(sockets, buffer) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/multiplayer_send_packet")}
 	if !is_array(sockets) sockets = [sockets]
 	for (var i = 0; i < array_length(sockets); i++) {
+		if instance_exists(obj_multiplayer) {
+			// throttle if too much
+			var _network = obj_multiplayer.network
+			if (_network.statistics.pps > _network.settings.max_pps_goal) {
+				__log("PPS IS OVER MAX PPS GOAL!! THROTTLING!!")
+				exit;
+			}
+			obj_multiplayer.network.statistics.pps++
+		}
 		network_send_packet(real(sockets[i]), buffer, buffer_get_size(buffer))
 		global.multiplayer_packets_sent++
 		show_debug_message("multiplayer_send_packet: Sent packet out! (" + string(sockets[i]) + ")")
@@ -216,7 +253,7 @@ function multiplayer_send_packet(sockets, buffer) {
 }
 
 function multiplayer_handle_packet(sock, buffer) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/multiplayer_handle_packet")}
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/multiplayer_handle_packet")}
 	buffer_seek(buffer, buffer_seek_relative, 0)
 	var packet_id = buffer_read_ext(buffer)
 	buffer_seek(buffer, buffer_seek_relative, 0)
@@ -225,45 +262,95 @@ function multiplayer_handle_packet(sock, buffer) {
 		if (check_is_server()) {
 			var _sock_state = sock_get_state(sock)
 			if !(pkt.options.connection_state == _sock_state) {
-				__log("Ignoring recieved packet from sock (" + string(sock) + ") due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', sock_state: '" + string(_sock_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logWarningType)
+				__log("Ignoring recieved packet from sock (" + string(sock) + ") due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', sock_state: '" + string(_sock_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logType.warning.def)
 				exit;
 			}
 		} else {
 			if !(pkt.options.connection_state == obj_multiplayer.network.connection_state) {
-				__log("Ignoring recieved packet due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', connection_state: '" + string(obj_multiplayer.network.connection_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logWarningType)
+				__log("Ignoring recieved packet due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', connection_state: '" + string(obj_multiplayer.network.connection_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logType.warning.def)
 				exit;
 			}
 		}
 		pkt.readPacketData(buffer)
 		pkt.processPacket()
 	} else {
-		__log("Packet ID not found in packet registry! (Packet ID: " + string(packet_id) + ")", logWarningType)
+		__log("Packet ID not found in packet registry! (Packet ID: " + string(packet_id) + ")", logType.warning.def)
 	}
 }
 
-function eid_to_inst(id) {
-	if !is_multiplayer()
+function eid_to_inst(eid) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/eid_to_inst")}
+	eid = string(eid)
+	if (!is_multiplayer()) {
+		__log("Tried to get instance from eid '" + eid + "' while not in multiplayer! (Returning noone)", logType.warning.not_multiplayer)
 		return noone
-	if struct_exists(obj_multiplayer.network.entities, id)
-		return obj_multiplayer.network.entities[$ id].instance
+	}
+	if (struct_exists(obj_multiplayer.network.entities, eid)) {
+		var _entity = obj_multiplayer.network.entities[$ eid]
+		if (struct_exists(_entity, "instance")) {
+			return _entity.instance
+		} else {
+			__log("Failed to get instance, eid '" + eid + "' in 'network.entities' doesn't have 'instance'! (Returning noone)", logType.error.not_found)
+		}
+	} else {
+		__log("Failed to get instance, eid '" + eid + "' doesn't exist in 'network.entities'! (Returning noone)", logType.error.not_found)
+	}
 	return noone
 }
 
-function pid_to_inst(id) {
-	if !is_multiplayer()
+function pid_to_inst(pid) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/pid_to_inst")}
+	pid = string(pid)
+	if (!is_multiplayer()) {
+		__log("Tried to get instance from pid '" + pid + "' while not in multiplayer! (Returning noone)", logType.warning.not_multiplayer)
 		return noone
-	if struct_exists(obj_multiplayer.network.players, id)
-		return obj_multiplayer.network.players[$ id].entity.instance
+	}
+	if (struct_exists(obj_multiplayer.network.players, pid)) {
+		var _plr = obj_multiplayer.network.players[$ pid]
+		if (struct_exists(_plr, "entity")) {
+			if (struct_exists(_plr[$ "entity"], "instance")) {
+				return _plr.entity.instance
+			} else {
+				__log("Failed to get instance, pid '" + pid + "' in 'network.players' has 'entity' but not 'entity.instance'! (Returning noone)", logType.error.not_found)
+			}
+		} else {
+			__log("Failed to get instance, pid '" + pid + "' in 'network.players' doesn't have 'entity'! (Returning noone)", logType.error.not_found)
+		}
+	} else {
+		__log("Failed to get instance, pid '" + pid + "' doesn't exist in 'network.players'! (Returning noone)", logType.error.not_found)
+	}
 	return noone
 }
 
 function sock_to_inst(sock) {
-	if !is_multiplayer()
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/sock_to_inst")}
+	if (!is_multiplayer()) {
+		__log("Tried to get sock '" + sock + "' instance while not in multiplayer! (Returning noone)", logType.warning.not_multiplayer)
 		return noone
+	} else if (!check_is_server()) {
+		__log("Tried to get sock '" + sock + "' instance as client! (Returning noone)", logType.warning.server_action_as_client)
+		return noone
+	}
 	sock = string(sock)
-	if (struct_exists(obj_multiplayer.server.clients, sock) && struct_exists(obj_multiplayer.network.players, obj_multiplayer.server.clients[$ sock].pid))
-		return obj_multiplayer.network.players[$ obj_multiplayer.server.clients[$ sock].pid].entity.instance
+	var _pid = sock_get(sock, "pid", -1)
+	if (_pid > -1) {
+		return pid_to_inst(_pid) // pid
+	} else {
+		__log("Failed to get instance, sock '" + sock + "' doesn't exist in 'server.clients'! (Returning noone)", logType.error.not_found)
+	}
 	return noone
+}
+
+function is_controlling_cam_target() {
+	if !instance_exists(obj_camera)
+		return 0
+	var ct = obj_camera.camTarget
+	if (obj_camera.camTarget == -4)
+		return 0
+	else if instance_exists(obj_camera.camTarget) {
+		return (variable_instance_exists(ct.id, "controlled")) ? (ct.controlled == -1) : 0
+	} else
+		return 0	
 }
 
 function num_to_pos(value) {
@@ -287,10 +374,55 @@ function server_player_count() {
 	return -1
 }
 
+function sock_get(sock, value, fallback = -4) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/sock_get")}
+	value = string(value); sock = string(sock);
+	if (!is_multiplayer()) {
+		__log("Tried to get '" + value + "' from sock '" + sock + "' while not in multiplayer! (Returning fallback '" + string(fallback) + "')", logType.warning.not_multiplayer)
+		return fallback
+	} else if (!check_is_server()) {
+		__log("Tried to get '" + value + "' from sock '" + sock + "' as a client! (Returning fallback '" + string(fallback) + "')", logType.warning.server_action_as_client)
+		return fallback
+	}
+	if (struct_exists(obj_multiplayer.server.clients, sock)) {
+		if (struct_exists(obj_multiplayer.server.clients[$ sock], value)) {
+			return obj_multiplayer.server.clients[$ sock][$ value]
+		} else {
+			__log("Tried to get non-existent value '" + value + "' from sock '" + sock + "'! (Returning fallback '" + string(fallback) + "')", logType.error.not_found)
+			return fallback
+		}
+	} else {
+		__log("Tried to get '" + value + "' from non-existent sock '" + sock + "'! (Returning fallback '" + string(fallback) + "')", logType.error.not_found)
+		return fallback
+	}
+}
+
+function sock_set(sock, variable, value) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/sock_set")}
+	variable = string(variable); sock = string(sock);
+	if (!is_multiplayer()) {
+		__log("Setting sock '" + sock + "' '" + variable + "' to '" + string(value) + "' while not in multiplayer!", logType.warning.not_multiplayer)
+	} else if (!check_is_server()) {
+		__log("Setting sock '" + sock + "' '" + variable + "' to '" + string(value) + "' as a client!", logType.warning.server_action_as_client)
+	}
+	if (struct_exists(obj_multiplayer.server.clients, sock)) {
+		if !(struct_exists(obj_multiplayer.server.clients[$ sock], value)) {
+			__log("'" + variable + "' was previously undefined/unset for sock '" + sock + "'", logType.warning.def)
+		}
+		struct_set(obj_multiplayer.server.clients[$ sock], variable, value)
+		__log("Set sock '" + sock + "' '" + variable + "' to '" + string(value) + "'")
+	} else {
+		__log("Tried to set non-existent sock '" + sock + "' '" + variable + "' to '" + string(value) + "'", logType.error.not_found)
+	}
+}
+
 function pid_to_sock(pid) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/pid_to_sock")}
-	if (!is_multiplayer() || !check_is_server()) {
-		__log("Tried to get a sock from a PID as a client or while not in multiplayer! (attempted pid to use: " + string(pid) + ")", "WARNING")
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/pid_to_sock")}
+	if (!is_multiplayer()) {
+		__log("Tried to get a sock from a PID while not in multiplayer! (attempted pid to use: " + string(pid) + ")", logType.warning.not_multiplayer)
+		return -1
+	} else if (!check_is_server()) {
+		__log("Tried to get a sock from a PID as a client! (attempted pid to use: " + string(pid) + ")", logType.warning.server_action_as_client)
 		return -1
 	}
 	var _clients = struct_get_names(obj_multiplayer.server.clients)
@@ -298,55 +430,27 @@ function pid_to_sock(pid) {
 		if (string(obj_multiplayer.server.clients[$ _clients[i]].pid) == string(pid))
 			return _clients[i]
 	}
-	__log("Unable to find sock from pid (returnning '-1')! (attempted pid to use: " + string(pid) + ")", "WARNING")
+	__log("Unable to find sock from pid (returnning '-1')! (attempted pid to use: " + string(pid) + ")", logType.error.not_found)
 	return -1
 }
 
 function sock_get_pid(sock) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/sock_get_pid")}
-	if (!is_multiplayer() || !check_is_server()) {
-		__log("Tried to get a sock's PID as a client or while not in multiplayer! (non-existent sock: " + string(sock) + ")", "WARNING")
-		return -1
-	}
-	if struct_exists(obj_multiplayer.server.clients, sock) {
-		return obj_multiplayer.server.clients[$ sock].pid
-	}
-	__log("Tried to get non-existent sock's PID! (non-existent sock: " + string(sock) + ")", "WARNING")
-	return -1
+	return sock_get(sock, "pid", -1)
 }
 
 function sock_get_state(sock) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/sock_get_state")}
-	if (!is_multiplayer() || !check_is_server()) {
-		__log("Tried to get a sock's connection state as a client or while not in multiplayer! (non-existent sock: " + string(sock) + ")", "WARNING")
-		return -1
-	}
-	if struct_exists(obj_multiplayer.server.clients, sock) {
-		return obj_multiplayer.server.clients[$ sock].connection_state
-	}
-	__log("Tried to get non-existent sock's connection state! (non-existent sock: " + string(sock) + ")", "WARNING")
-	return -1
+	return sock_get(sock, "connection_state", -1)
 }
 
 function sock_set_state(sock, state) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/sock_set_state")}
-	if (!is_multiplayer() || !check_is_server()) {
-		__log("Tried to set a sock's connection state as a client or while not in multiplayer! (non-existent sock: " + string(sock) + ", state: " + string(state) + ")", "WARNING")
-		exit;
-	}
-	if struct_exists(obj_multiplayer.server.clients, sock) {
-		obj_multiplayer.server.clients[$ sock].connection_state = state
-		exit;
-	}
-	__log("Tried to set non-existent sock's connection state! (non-existent sock: " + string(sock) + ", state: " + string(state) + ")", "WARNING")
-	exit;
+	sock_set(sock, "connection_state", state)
 }
 
 // CONSTRUCTORS
 
 function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, EID = -1, CREATE_ON_CLIENTS = 1) constructor {
 	var e = self
-	e.entity_id = (EID != -1) ? EID : ((instance_exists(obj_multiplayer)) ? (struct_names_count(obj_multiplayer.network.entities) + MAX_CLIENTS) : MAX_CLIENTS)
+	e.entity_id = (EID != -1) ? EID : generate_eid()
 	e.x = X
 	e.dx = 0
 	e.y = Y
@@ -371,16 +475,37 @@ function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, 
 		dir: e.x,
 	}
 
-	entityLog = function(msg, type = logInfoType, src_func = "unspecifiedFunc") {
+	entityLog = function(msg, type = logType.info.def, src_func = "unspecifiedFunc") {
 		var e = self
 		var _obj_name = object_get_name(e.__object_index)
 		log(msg, type, "ENTITY/" + _obj_name + "/" + string(src_func))
 	}
 	create = function() {
 		var e = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "create")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "create")}
 		
 		__log("Started creation process for '" + object_get_name(e.__object_index) + "' entity:")
+		
+		// check if eid already exists in shit
+		if instance_exists(obj_multiplayer) {
+			if struct_exists(obj_multiplayer.network.entities, e.entity_id)	{
+				__log("Our EID exists in 'network.entities'!", logType.warning.def)
+				
+				if (obj_multiplayer.network.entitles.object_index == e.__object_index) {
+					__log("Duplicated EID entity has same object index! Going to try and attach to it instead!", logType.warning.def)
+					attach(eid_to_inst(e.entity_id).id)
+					__log("Attachment might be successful?", logType.warning.def)
+					exit;
+				} else {
+					__log("Duplicated EID entity doesn't have the same object index! Destroying it!", logType.warning.def)
+					eid_to_entity_struct(e.entity_id).destroy()
+					__log("Destroying might be successful?", logType.warning.def)
+				}
+			} else {
+				__log("Our EID doesn't exist in 'network.entities'!", logType.info.def)
+			}
+		}
+		
 		if (typeof(e.__depth_or_layer) == "string") { // layer
 			e.instance = instance_create_layer(e.x, e.y, e.__depth_or_layer, e.__object_index, e.__variables_struct)
 		} else {
@@ -432,7 +557,7 @@ function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, 
 	}
 	attach = function(id) {
 		var e = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "attach")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "attach")}
 		
 		e.instance = id
 		
@@ -491,7 +616,7 @@ function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, 
 	}
 	destroy = function() {
 		var e = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "destroy")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "destroy")}
 
 		__log("Started destroy process for '" + object_get_name(e.__object_index) + "' entity:")
 		__log("- Destroying '" + object_get_name(e.__object_index) + "' instance")
@@ -500,7 +625,7 @@ function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, 
 			__log("- Removing entity from obj_multiplayer entities struct.")
 			struct_remove(obj_multiplayer.network.entities, e.entity_id)
 		} else {
-			__log("- Cannot remove entity from entities struct, obj_multiplayer instance doesn't exist.", logWarningType)	
+			__log("- Cannot remove entity from entities struct, obj_multiplayer instance doesn't exist.", logType.warning.def)	
 		}
 		__log("Destroyed '" + object_get_name(e.__object_index) + "' entity!")
 		if (__sync_on_clients) && (check_is_server()) && (e.instance) && (instance_exists(e.instance)) {
@@ -514,7 +639,7 @@ function entity(X, Y, DIR, OBJECT_INDEX, DEPTH_OR_LAYER, VARIABLES_STRUCT = {}, 
 			}
 		}
 	}
-	var __log = function (msg, type = logInfoType) {entityLog(msg, type, "structInit")}
+	var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "structInit")}
 	__log("Entity struct created! (" + object_get_name(e.__object_index) + ")")
 }
 
@@ -533,26 +658,26 @@ function player_entity(USERNAME, X, Y, DIR, VARIABLES_STRUCT = {}, PLAYER_ID = u
 	kick = function() {
 		exit;
 	}
-	entityLog = function(msg, type = logInfoType, src_func = "unspecifiedFunc") {
+	entityLog = function(msg, type = logType.info.def, src_func = "unspecifiedFunc") {
 		var p = self
 		log(msg, type, "PLAYER_ENTITY/" + p.username + "/" + string(src_func))
 	}
 	create = function() {
 		var p = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "create")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "create")}
 		__log("Create ran for player entity, passthrough to entity.create")
 		
 		if p.create_new_network_obj {
 			p.entity.create()
 			struct_set(obj_multiplayer.network.players, p.player_id, self)
 		} else {
-			__log("- p.create_new_network_obj is 0, cancelling create...", logWarningType)
+			__log("- p.create_new_network_obj is 0, cancelling create...", logType.warning.def)
 			exit;
 		}
 	}
 	attach = function(_id) {
 		var p = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "attach")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "attach")}
 		__log("Attach ran for player entity, passthrough to entity.attach")
 //		p.__object_index = _id.object_index
 		p.entity.attach(_id)
@@ -560,17 +685,17 @@ function player_entity(USERNAME, X, Y, DIR, VARIABLES_STRUCT = {}, PLAYER_ID = u
 	}
 	destroy = function() {
 		var p = self
-		var __log = function (msg, type = logInfoType) {entityLog(msg, type, "destroy")}
+		var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "destroy")}
 		__log("Destroy ran for player entity, passthrough to entity.destroy")
 		p.entity.destroy()
 		if instance_exists(obj_multiplayer) {	
 			__log("- Removing player from obj_multiplayer players struct.")
 			struct_remove(obj_multiplayer.network.players, p.player_id)
 		} else {
-			__log("- Cannot remove entity from players struct, obj_multiplayer instance doesn't exist.", logWarningType)	
+			__log("- Cannot remove entity from players struct, obj_multiplayer instance doesn't exist.", logType.warning.def)	
 		}
 	}
-	var __log = function (msg, type = logInfoType) {entityLog(msg, type, "structInit")}
+	var __log = function (msg, type = logType.info.def) {entityLog(msg, type, "structInit")}
 	__log("Player struct created! (" + p.username + ")")
 }
 
@@ -616,7 +741,7 @@ function CONNECT_SB_PING_REQUEST(SOCK = -1, RID = -1) constructor {
 	self.sock = SOCK
 	self.rid = RID
 	struct_set(obj_multiplayer.network.connection_state_data, "connect_rid", RID)
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONNECT_SB_PING_REQUEST/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -646,7 +771,7 @@ function CONNECT_CB_PONG_RESPONSE(RID = -1) constructor {
 	}
 	
 	self.rid = RID
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONNECT_CB_PONG_RESPONSE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -682,7 +807,7 @@ function CONNECT_SB_CONNECTION_CONFIRMATION(SOCK = -1) constructor {
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONNECT_SB_CONNECTION_CONFIRMATION/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -714,7 +839,7 @@ function CONFIGURATION_CB_REQUEST_CLIENT_INFO() constructor {
 		packet_title: "CONFIGURATION_CB_REQUEST_CLIENT_INFO"
 	}
 
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONFIGURATION_CB_REQUEST_CLIENT_INFO/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -749,7 +874,7 @@ function CONFIGURATION_SB_CLIENT_INFO(SOCK = -1, USERNAME = "", POS = [-4, 0, -4
 	self.sock = SOCK
 	self.client_username = USERNAME
 	self.client_pos = POS
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONFIGURATION_SB_CLIENT_INFO/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -801,7 +926,7 @@ function CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION(APPROVED = 1, REASON = "") co
 
 	self.approved = APPROVED
 	self.reason = REASON
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -835,7 +960,7 @@ function CONFIGURATION_SB_LOAD_GAME_READY(SOCK = -1) constructor {
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/CONFIGURATION_SB_LOAD_GAME_READY/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -876,7 +1001,7 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 	self.client_info = CLIENT_INFO
 	self.server_info = SERVER_INFO
 	
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/LOAD_GAME_CB_GAME_STATE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -898,7 +1023,7 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 		buffer_write_ext(buf, buffer_array, self.mobs_array)
 		buffer_write_ext(buf, buffer_array, self.client_info)
 		buffer_write_ext(buf, buffer_array, self.server_info)
-		packetLog("Wrote Packet. Size is: " + string(buffer_tell(buf)) + " bytes", logInfoType, "writePacketData")
+		packetLog("Wrote Packet. Size is: " + string(buffer_tell(buf)) + " bytes", logType.info.def, "writePacketData")
 		return buf
 	}
 	processPacket = function() {
@@ -937,6 +1062,8 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 	
 		// apply interactables array ([ pos, type, passenger, locked ])
 		packetLog("Applying Interactables Array...")
+		with (obj_interactable)
+			instance_destroy();
 		for (var i = 0; i < array_length(self.interactables_array); i++) {
 			var _inst = self.interactables_array[i]
 			packetLog("- Handling _inst: " + string(_inst))
@@ -976,87 +1103,85 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 		}
 		packetLog("Applied Interactables Array!")
 	
-		// apply player array ([ username, uuid, pos, hiding, flash ])
+		// apply player array ([ username, x, dx, y, dir, pid, flash, hiding])
 		packetLog("Applying Players Array...")
 		var seen_plrs = []
 		for (var i = 0; i < array_length(self.players_array); i++) {
 			var _plr = self.players_array[i]
-			var _pid = _plr[1]
 			packetLog("- Handling _plr: " + string(_plr))
+			
+			var _username = _plr[0]
+			var _x = _plr[1]
+			var _dx = _plr[2]
+			var _y = _plr[3]
+			var _dir = _plr[4]
+			var _pid = _plr[5]
+			var _flash = _plr[6]
+			var _hiding = _plr[7]
+			
 			if array_contains(seen_plrs, _pid) { // pid
-				packetLog("-- Skipping duplicate/seen _plr: " + string(_plr), logWarningType)
+				packetLog("-- Skipping duplicate/seen _plr: " + string(_plr), logType.warning.def)
 				continue;
 			}
 			if (_pid == obj_multiplayer.client.player.pid) {
-				packetLog("-- Skipping _plr with our Client's PID (That's us!)", logWarningType)
+				packetLog("-- Skipping _plr with our Client's PID (That's us!)", logType.warning.def)
 				continue;
 			}
 			array_push(seen_plrs, _pid)
-			
-			var _u = _plr[0]
-			var _pos = _plr[2]
-			var _hiding = _plr[3]
-			var _flash = _plr[4]
-			
+
 			if (pid_to_inst(_pid) == noone) {
-				packetLog("-- Player INST doesn't exist. Creating it. (USERNAME: " + string(_u) + ", PID: " + string(_pid) + ")")
-				var _player = new player_entity(_u, _pos[0], _pos[2], _pos[3], {}, _pid)
+				packetLog("-- Player INST doesn't exist. Creating it. (USERNAME: " + string(_username) + ", PID: " + string(_pid) + ")")
+				var _player = new player_entity(_username, _x, _y, _dir, {"hiding": _hiding, "flashOn": _flash}, _pid, 1)
 				_player.create()
 			}
 		
-			// adjust client version of pkun
+			// adjust client version of player
 			with (pid_to_inst(_pid)) {
 				other.packetLog("- Applying X, DX, Y, DIR, HIDING, & FLASH")
-				x = _pos[0] // -= adjust_to_fps((x - other.pos[0]) / 2);
-				y = _pos[2] //-= adjust_to_fps((y - other.pos[2]) / 2);
-				dir = _pos[3]
-				dx = (_pos[1] * dir)
+				x = _x
+				y = _y
+				dir = _dir
+				dx = (_dx * dir)
 				hiding = _hiding
 				flashOn = _flash
 			}
-			packetLog("-- COMPLETED PROCESSING THIS PLAYER (" + string(_u) + ")")
+			packetLog("-- COMPLETED PROCESSING THIS PLAYER (" + string(_username) + ")")
 		}
 		packetLog("Applied Players Array!")
 	
-		// apply mobs array ([ uuid, pos, state, obj_index ])
-		packetLog("Applying Mobs Array...")
+		// apply entities array ([ eid, x, dx, y, dir, state, obj_index ])
+		packetLog("Applying Entities Array...")
+		with (obj_p_mob)
+			instance_destroy();
 		for (var i = 0; i < array_length(self.mobs_array); i++) {
 			var _mob = self.mobs_array[i]
 			packetLog("- Handling _mob: " + string(_mob))
-			
-		
 			var _eid = _mob[0]
+			var _x = _mob[1]
+			var _dx = _mob[2]
+			var _y = _mob[3]
+			var _dir = _mob[4]
+			var _state = _mob[5]
+			var _object_index = real(_mob[6])
+			
 			if ((_eid < 0 ) || is_undefined(_eid)) {
-				packetLog("-- Skipping mob, EID is invalid or empty! (EID: " + string(_eid) + ")", logWarningType)
+				packetLog("-- Skipping mob, EID is invalid or empty! (EID: " + string(_eid) + ")", logType.warning.def)
 				continue;	
 			}
-			var _pos = _mob[1]
-			var _state = _mob[2]
-			var _object_index = real(_mob[3])
+			
+			if (_eid == obj_multiplayer.client.player.pid) { // pid
+				packetLog("-- Skipping mob, EID is us!" + string(_eid), logType.warning.def)
+				continue;
+			}
 			
 			if (eid_to_inst(_eid) == noone) {
-				packetLog("-- Mob INST doesn't exist. Creating it. (OBJECT_NAME: " + string(object_get_name(_object_index)) + ", EID: " + string(_eid) + ")")
-				//var inst = instance_create_depth(_pos[0], _pos[2], -3, _object_index)
-				//inst.entity_id = _eid
-				//struct_set(obj_multiplayer.network.entities, inst.entity_id, inst.id)
-				var _entity = new entity(_pos[0], _pos[2], _pos[3], _object_index, -3, {"state": _state}, _eid)
+				packetLog("-- Entity INST doesn't exist. Creating it. (OBJECT_NAME: " + string(object_get_name(_object_index)) + ", EID: " + string(_eid) + ")")
+				var _entity = new entity(_x, _y, _dir, _object_index, -3, {"state": _state}, _eid)
 				_entity.create()
-				packetLog("-- Applied that mob. (OBJECT_NAME: " + string(object_get_name(_object_index)) + ", EID: " + string(_eid) + ")")
+				packetLog("-- Applied that entity. (OBJECT_NAME: " + string(object_get_name(_object_index)) + ", EID: " + string(_eid) + ")")
 			}
-		
-			//// adjust client version of pkun
-			//with (eid_to_inst(_eid)) {
-			//	other.packetLog("- Applying X, DX, Y, DIR, HIDING, & FLASH")
-			//	x = _pos[0] // -= adjust_to_fps((x - other.pos[0]) / 2);
-			//	y = _pos[2] //-= adjust_to_fps((y - other.pos[2]) / 2);
-			
-			//	dir = _pos[3]
-			//	dx = (_pos[1] * dir)
-			//	state = _state
-			//}
-			//packetLog("-- COMPLETED PROCESSING THIS MOB (" + string(_pid) + ")")
 		}
-		packetLog("Applied Mobs Array!")
+		packetLog("Applied Entities Array!")
 		packetLog("CONNECTION_STATE IS NOW 'PLAY'")
 		obj_multiplayer.network.connection_state = CONNECTION_STATE.PLAY
 		
@@ -1078,7 +1203,7 @@ function LOAD_GAME_SB_CLIENT_LOADED_GAME(SOCK = -1) constructor {
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/LOAD_GAME_SB_CLIENT_LOADED_GAME/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1094,7 +1219,7 @@ function LOAD_GAME_SB_CLIENT_LOADED_GAME(SOCK = -1) constructor {
 		packetLog("Recieved ready to play confirmation from sock (" + string(self.sock) + ")!")
 		packetLog("SOCK '" + string(self.sock) + "' CONNECTION_STATE IS NOW 'PLAY'")
 		sock_set_state(self.sock, CONNECTION_STATE.PLAY)
-		add_timer(string(self.sock) + "_PLAY_KEEPALIVE_TIMEOUT", adjust_to_fps(1), 900, [server_remove_player_inst, [self.sock]], 0, 1)
+//		add_timer(string(self.sock) + "_PLAY_KEEPALIVE_TIMEOUT", adjust_to_fps(1), 900, [server_remove_player_inst, [self.sock]], 0, 1)
 		add_timer(string(self.sock) + "_SEND_KEEPALIVE_TIMER", adjust_to_fps(1), 450, [do_packet, [new PLAY_CB_KEEP_ALIVE(), self.sock]], 1, 0)
 	}
 }
@@ -1202,7 +1327,7 @@ function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDIN
 	self.sock = SOCK
 	self.pos = [X, DX, Y, DIR]
 	self.hiding = HIDING
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_MOVE_PLAYER_POS/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1219,7 +1344,7 @@ function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDIN
 	}
 	processPacket = function() {
 		if !is_array(self.pos) {
-			packetLog("self.pos IS NOT ARRAY! self.pos = '" + string(self.pos) + "'", logErrorType)	
+			packetLog("self.pos IS NOT ARRAY! self.pos = '" + string(self.pos) + "'", logType.error.def)	
 			exit;
 		}
 
@@ -1271,7 +1396,7 @@ function PLAY_CB_MOVE_PLAYER_POS(PID = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDING
 	self.pid = PID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.hiding = HIDING
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_MOVE_PLAYER_POS/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1290,7 +1415,7 @@ function PLAY_CB_MOVE_PLAYER_POS(PID = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDING
 	}
 	processPacket = function() {
 		if (self.pid < 0) {
-			packetLog("Couldn't create or edit player with invalid pid!", logWarningType)
+			packetLog("Couldn't create or edit player with invalid pid!", logType.warning.def)
 			exit;
 		}
 		
@@ -1330,7 +1455,7 @@ function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE 
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.state = STATE
 	self.object_index = OBJECT_INDEX
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_MOVE_ENTITY_POS/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1351,7 +1476,7 @@ function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE 
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
-			packetLog("Couldn't create or edit entity with invalid eid!", logErrorType)
+			packetLog("Couldn't create or edit entity with invalid eid!", logType.error.def)
 			exit;
 		}
 		
@@ -1366,6 +1491,11 @@ function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE 
 	
 		// adjust client version of object
 		with (eid_to_inst(self.eid)) {
+			if !(entity_id == other.eid) {
+				other.packetLog("Tried to move entity with wrong eid?? Packet provided eid: '" + string(other.eid) + "', current instance eid: '" + string(self.entity_id) + "'")	
+				exit;
+			}
+			
 			x = other.pos[0] // -= adjust_to_fps((x - other.pos[0]) / 2);
 			y = other.pos[2] //-= adjust_to_fps((y - other.pos[2]) / 2);
 			
@@ -1387,7 +1517,7 @@ function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_I
 	self.eid = EID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.object_index = OBJECT_INDEX
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_CREATE_ENTITY/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1406,9 +1536,11 @@ function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_I
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
-			packetLog("Couldn't create entity with invalid eid!", logErrorType)
+			packetLog("Couldn't create entity with invalid eid!", logType.error.def)
 			exit;
 		}
+		
+		packetLog("Got create entity packet! (" + string(object_get_name(self.object_index)) + ")")
 		
 		// remove entity if has same uuid but different obj index
 		var _ent = eid_to_inst(self.eid)
@@ -1422,10 +1554,6 @@ function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_I
 		
 		if (eid_to_inst(self.eid) == noone) { // check if entity doesn't exists
 			packetLog("Creating new '" + string(object_get_name(self.object_index)) + "' with eid '" + string(self.eid) + "'")
-			//var inst = instance_create_depth(self.pos[0], self.pos[2], -3, self.object_index)
-			//inst.entity_id = self.eid
-			//inst.dir = self.pos[3]
-			//struct_set(obj_multiplayer.network.entities, self.eid, inst.id)
 			var _entity = new entity(self.pos[0], self.pos[2], self.pos[3], self.object_index, -3, {}, self.eid)
 			_entity.create()
 		}
@@ -1441,7 +1569,7 @@ function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
 	}
 	
 	self.entities = ENTITIES // [EID, X, DX, Y, DIR, OBJ_INDEX]
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_CREATE_ENTITIES/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1457,7 +1585,7 @@ function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
 	}
 	processPacket = function() {
 		if (array_length(self.entities) <= 0) {
-			packetLog("Couldn't create entity with empty entities array!", logWarningType)
+			packetLog("Couldn't create entity with empty entities array!", logType.warning.def)
 			exit;
 		}
 		
@@ -1466,7 +1594,7 @@ function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
 			packetLog("- Applying entity: " + string(_e))	
 			
 			if (array_length(_e) < 6) {
-				packetLog("-- Couldnt create entity, entity_array doesn't have enough indexes.", logErrorType)	
+				packetLog("-- Couldnt create entity, entity_array doesn't have enough indexes.", logType.error.def)	
 			}
 				
 			var _temp_packet = new PLAY_CB_CREATE_ENTITY(_e[0], _e[1], _e[2], _e[3], _e[4], _e[5])
@@ -1484,7 +1612,7 @@ function PLAY_CB_DESTROY_ENTITY(EID = -1) constructor {
 	}
 	
 	self.eid = EID
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_DESTROY_ENTITY/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1499,7 +1627,7 @@ function PLAY_CB_DESTROY_ENTITY(EID = -1) constructor {
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
-			packetLog("Couldn't destroy entity with invalid eid!", logErrorType)
+			packetLog("Couldn't destroy entity with invalid eid!", logType.error.def)
 			exit;
 		}
 		
@@ -1519,7 +1647,7 @@ function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
 	}
 	
 	self.object_index = OBJECT_INDEX
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_DESTROY_OBJECT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1534,7 +1662,7 @@ function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
 	}
 	processPacket = function() {
 		if (self.object_index == -4) {
-			packetLog("Couldn't destroy object with empty object index!", logErrorType)
+			packetLog("Couldn't destroy object with empty object index!", logType.error.def)
 			exit;
 		}
 		
@@ -1611,7 +1739,7 @@ function PLAY_SB_TOGGLE_FLASHLIGHT(SOCK = -1, FLASH = 0) constructor {
 	
 	self.sock = SOCK
 	self.flash = FLASH
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_TOGGLE_FLASHLIGHT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1648,7 +1776,7 @@ function PLAY_CB_TOGGLE_FLASHLIGHT(PID = -1, FLASH = 0) constructor {
 	
 	self.pid = PID
 	self.flash = FLASH
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_TOGGLE_FLASHLIGHT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1684,7 +1812,7 @@ function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HS_STP) constructor {
 	self.sock = SOCK
 	self.mob_id = MOB_ID
 	self.hs_stp = HS_STP
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_SET_HSCENE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1730,7 +1858,7 @@ function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HID
 	self.hs_snd = HS_SND
 	self.hs_trans_alp = TRANS_ALP
 	self.hs_hide_fl = HIDE_FL
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_SET_HSCENE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1796,7 +1924,7 @@ function PLAY_SB_SET_ENTITY_CONTROL(SOCK = -1, EID_TO_CONTROL = -1, CONTROL = 0)
 	self.sock = SOCK
 	self.eid = EID_TO_CONTROL
 	self.control = CONTROL
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_SET_ENTITY_CONTROL/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1821,7 +1949,7 @@ function PLAY_SB_SET_ENTITY_CONTROL(SOCK = -1, EID_TO_CONTROL = -1, CONTROL = 0)
 			dx = 0
 			exit;
 		}
-		packetLog("NO ENTITY FOUND FOR EID " + string(self.eid) + ", CONTROLLER SOCK IS " + string(self.sock), logErrorType)
+		packetLog("NO ENTITY FOUND FOR EID " + string(self.eid) + ", CONTROLLER SOCK IS " + string(self.sock), logType.error.def)
 	}
 }
 ds_map_add(global.packet_registry, 62, PLAY_SB_SET_ENTITY_CONTROL)
@@ -1838,7 +1966,7 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR 
 	self.eid = EID
 	self.pos = [X, abs(DX), Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.state = STATE
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_MOVE_ENTITY_POS/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1858,12 +1986,12 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR 
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
-			packetLog("Couldn't create or edit entity with invalid eid!", logErrorType)
+			packetLog("Couldn't create or edit entity with invalid eid!", logType.error.def)
 			exit;
 		}
 		
 		if (eid_to_inst(self.eid) == noone) {
-			packetLog("Couldn't move entity on server from client request, client provided entity_id doesn't exist.", logErrorType)
+			packetLog("Couldn't move entity on server from client request, client provided entity_id doesn't exist.", logType.error.def)
 			exit;
 		}
 	
@@ -1871,7 +1999,7 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR 
 		with (eid_to_inst(self.eid)) {
 			// check if being controlled, and if it is from right sock
 			if !(controlled == other.sock) {
-				other.packetLog("Illegal attempt from client to move entity '" + string(other.uuid) + "' (offender sock = " + string(other.sock) + ", entity.controlled = " + string(controlled) + ", client provided entity_id = " + string(other.uuid) + ")", logWarningType)
+				other.packetLog("Illegal attempt from client to move entity '" + string(other.uuid) + "' (offender sock = " + string(other.sock) + ", entity.controlled = " + string(controlled) + ", client provided entity_id = " + string(other.uuid) + ")", logType.warning.def)
 				exit;
 			}
 
@@ -1895,7 +2023,7 @@ function PLAY_SB_SET_TIME_STOP(SOCK = -1, TIMESTOP = 0) constructor {
 	
 	self.sock = SOCK
 	self.timestop = TIMESTOP
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_SET_TIME_STOP/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1930,7 +2058,7 @@ function PLAY_CB_SET_TIME_STOP(CAN_CLIENT_MOVE_IN_TIMESTOP = 0, TIMESTOP = 0) co
 	
 	self.can_move = CAN_CLIENT_MOVE_IN_TIMESTOP
 	self.timestop = TIMESTOP
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_SET_TIME_STOP/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1965,7 +2093,7 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructo
 	self.intr_type = INTR_TYPE
 	self.x = X
 	self.y = Y
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_INTERACT_AT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -1987,21 +2115,21 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructo
 		var _intr = instance_nearest(self.x, self.y, obj_interactable)
 		var _plr = sock_to_inst(self.sock)
 		var _hidebox = (self.intr_type == "hidebox")
-		
+	
 		if (!instance_exists(_intr) && !_hidebox) || !instance_exists(_plr) {
-			packetLog("Interacted w/ obj not found or dont exist OR player doesnt exist", logWarningType)
+			packetLog("Interacted w/ obj not found or dont exist OR player doesnt exist", logType.warning.def)
 			exit;
 		}
 		
 		with (_plr) {
 			if (distance_to_object(_intr) > 50) && !_hidebox {
-				other.packetLog("Tried to interact w/ obj that's too far from player!", logWarningType)
+				other.packetLog("Tried to interact w/ obj that's too far from player!", logType.warning.def)
 				exit;
 			}
 		}
 		
 		if !(_hidebox) && (_intr.type != self.intr_type) {
-			packetLog("Interacted w/ obj type doesnt match provided intr_type! Cancelling!", logWarningType)
+			packetLog("Interacted w/ obj type doesnt match provided intr_type! Cancelling!", logType.warning.def)
 			exit;
 		}
 		
@@ -2009,6 +2137,20 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructo
 			case "portal": {
 				packetLog("SOCK " + string(self.sock) + " Interacted w/ portal!")
 				play_se_at(_intr.se, _intr.x, _intr.y)
+				
+				// get all entities on same floor and send them to player so it is seamless
+				var _player_floor = get_floor(sock_to_inst(self.sock).y)
+				var _entities = struct_get_names(obj_multiplayer.network.entities)
+				for (var i = 0; i < array_length(_entities); i++) {
+					with (eid_to_inst(_entities[i])) {
+						var _flr = get_floor(y)	
+						if (_player_floor == _flr) {
+							other.packetLog("SOCK " + string(other.sock) + " Floor updated, sending '" + string(object_get_name(object_index)) + "' move packet so seamless!")
+							var _s = variable_instance_exists(id, "state") ? state : 0
+							do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_id, x, dx, y, dir, _s, object_index), other.sock)	
+						}
+					}
+				}
 				break;
 			}
 			case "hidespot": {
@@ -2030,7 +2172,7 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0) constructo
 			}
 			case "figure": {
 				packetLog("SOCK " + string(self.sock) + " Interacted w/ figure!")
-				packetLog("Figure Interaction Handling is not integrated yet...", logWarningType)
+				packetLog("Figure Interaction Handling is not integrated yet...", logType.warning.def)
 				break;
 			}
 			case "piano": {
@@ -2077,7 +2219,7 @@ function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_C
 	self.x = X
 	self.y = Y
 	self.as_target_client = AS_TARGET_CLIENT
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_INTERACT_AT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2105,13 +2247,13 @@ function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_C
 		var _hidebox = (self.intr_type == "hidebox")
 		
 		if (!instance_exists(_intr) && !_hidebox) || !instance_exists(_plr) {
-			packetLog("Interacted w/ obj not found or dont exist OR player doesnt exist", logWarningType)
+			packetLog("Interacted w/ obj not found or dont exist OR player doesnt exist", logType.warning.def)
 			exit;
 		}
 		
 		with (_plr) {
 			if (distance_to_object(_intr) > 50) && !_hidebox	 {
-				other.packetLog("Tried to interact w/ obj that's too far from player!", logWarningType)
+				other.packetLog("Tried to interact w/ obj that's too far from player!", logType.warning.def)
 				exit;
 			}
 		}
@@ -2183,7 +2325,7 @@ function PLAY_SB_SYNC_MINI_MSG(SOCK = -1, MINI_MSG = "", MINI_TMR = 0) construct
 	self.sock = SOCK
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_SYNC_MINI_MSG/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2223,7 +2365,7 @@ function PLAY_CB_SYNC_MINI_MSG(PID = -1, MINI_MSG = "", MINI_TMR = 0) constructo
 	self.pid = PID
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_SYNC_MINI_MSG/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2260,7 +2402,7 @@ function PLAY_SB_DISCONNECT(SOCK = -1, REASON = "notProvided") constructor {
 	
 	self.sock = SOCK
 	self.reason = REASON
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_DISCONNECT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2291,7 +2433,7 @@ function PLAY_CB_DISCONNECT(REASON = "notProvided") constructor {
 	}
 	
 	self.reason = REASON
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_DISCONNECT/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2358,7 +2500,7 @@ function PLAY_CB_SET_PKUN_MINI_MSG(MINI_MSG = "", MINI_TMR = 0) constructor {
 	
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_SET_PKUN_MINI_MSG/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2393,7 +2535,7 @@ ds_map_add(global.packet_registry, 73, PLAY_CB_SET_PKUN_MINI_MSG)
 	
 //	self.sock = SOCK
 //	self.username = NEW_USERNAME
-//	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_UPDATE_USERNAME/" + string(packet_func))}
+//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
 //		self.id = buffer_read_ext(buf)
@@ -2436,7 +2578,7 @@ ds_map_add(global.packet_registry, 73, PLAY_CB_SET_PKUN_MINI_MSG)
 	
 //	self.old_username = OLD_USERNAME
 //	self.username = NEW_USERNAME
-//	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_UPDATE_USERNAME/" + string(packet_func))}
+//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
 //		self.id = buffer_read_ext(buf)
@@ -2476,7 +2618,7 @@ function PLAY_SB_KEEP_ALIVE(SOCK = -1) constructor {
 	}
 	
 	self.sock = SOCK
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_SB_KEEP_ALIVE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2507,7 +2649,7 @@ function PLAY_CB_KEEP_ALIVE() constructor {
 		packet_title: "PLAY_CB_KEEP_ALIVE"
 	}
 
-	packetLog = function(msg, type = logInfoType, packet_func = "processPacket") {log(msg, type, "PKT/PLAY_CB_KEEP_ALIVE/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
 		self.id = buffer_read_ext(buf)
@@ -2532,12 +2674,62 @@ function PLAY_CB_KEEP_ALIVE() constructor {
 }
 ds_map_add(global.packet_registry, 77, PLAY_CB_KEEP_ALIVE)
 
+function PLAY_CB_PLAYER_JOINED(USERNAME = "playerJoinedUnsetUsername", X = -4, DX = 0, Y = -4, DIR = 1, PID = -1, FLASH = 1, HIDING = 0) constructor {
+	// generate player array ([ username, x, dx, y, dir, pid, flash, hiding])
+	self.id = 78
+	self.options = {
+		connection_state: CONNECTION_STATE.PLAY,
+		packet_title: "PLAY_CB_PLAYER_JOINED"
+	}
+
+	self.username = USERNAME
+	self.pos = [X, DX, Y, DIR]
+	self.pid = PID
+	self.flash = FLASH
+	self.hiding = HIDING
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	readPacketData = function(buf) {
+		buffer_seek(buf, buffer_seek_start, 0)
+		self.id = buffer_read_ext(buf)
+		self.username = buffer_read_ext(buf)
+		self.pos = buffer_read_ext(buf)
+		self.pid = buffer_read_ext(buf)
+		self.flash = buffer_read_ext(buf)
+		self.hiding = buffer_read_ext(buf)
+	}
+	writePacketData = function() {
+		var buf = buffer_create(1, buffer_grow, 1)
+		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+		buffer_write_ext(buf, buffer_string, self.username)
+		buffer_write_ext(buf, buffer_position, self.pos)
+		buffer_write_ext(buf, buffer_vint, self.pid)
+		buffer_write_ext(buf, buffer_bool, self.flash)
+		buffer_write_ext(buf, buffer_bool, self.hiding)
+		return buf
+	}
+	processPacket = function() {
+		// client
+		packetLog("Player joined!")
+		var _tn = "SERVER_PLAY_KEEPALIVE_TIMEOUT"
+		if struct_exists(obj_multiplayer.network.timers, _tn) {
+			obj_multiplayer.network.timers[$ _tn].curr = obj_multiplayer.network.timers[$ _tn].duration
+			packetLog("Reset '" + _tn + "' timer.")
+		} else {
+			packetLog("No '" + _tn + "' timer to reset?", "WARNING")
+		}
+	}
+}
+ds_map_add(global.packet_registry, 78, PLAY_CB_PLAYER_JOINED)
+
 
 
 
 
 /// @function do_packet
-/// @description Constructs and sends a packet. Argument1 is packet_id, rest of arguments are packet data (packet args for packet constructor)
+/// @param {struct} pkt Constructed packet to send
+/// @param {any} target_socks Socks to send pkt to
+/// @description Sends a constructed packet.
 function do_packet(pkt, target_socks) {
 	var pktbuf = pkt.writePacketData()
 	multiplayer_send_packet(target_socks, pktbuf)
@@ -2546,44 +2738,8 @@ function do_packet(pkt, target_socks) {
 
 // packet sending functions
 function sync_pkun_event() {
-	exit;
-	
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/sync_pkun_event")}
-	if !is_multiplayer()
-		exit;
-	
-	if (check_is_server() || (obj_multiplayer.network.server.connection < 0) || !instance_exists(obj_pkun) || room = rm_intro || room = rm_title) {
-		if check_is_server() {
-			// redirect if server? update clients?
-			_cb_sync_pkun()
-		}
-		exit; // only run as client and if we have moved
-	}
-	
-	var tX = obj_pkun.x
-	var tDX = (global.menu_mode = 1) ? 0 : obj_pkun.move_speed
-	var tY = obj_pkun.y
-	var tDIR = obj_pkun.dir
-	var last_pos = global.multiplayer_pkun_sync_hist
-	
-	if (last_pos[0] == tX) && (last_pos[1] == tY) && (last_pos[2] == tDIR) {
-		if global.multiplayer_check_sent_last_pkun_pos { // we did do the last update
-			exit;
-		} else {
-			global.multiplayer_check_sent_last_pkun_pos = 1
-		}
-	} else {
-		global.multiplayer_check_sent_last_pkun_pos = 0 // pos changed	
-	}
-	
-	global.multiplayer_pkun_sync_hist[0] = tX
-	global.multiplayer_pkun_sync_hist[1] = tY 
-	global.multiplayer_pkun_sync_hist[2] = tDIR
-
-//	do_packet(new PLAY_SB_MOVE_PLAYER_POS(-1, tX, tDX, tY, tDIR), obj_multiplayer.network.server.connection) //, tTW, tFO)
-	
-	obj_pkun.last_move_speed = obj_pkun.move_speed
-	__log("Sent Pkun Sync Packet")
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/sync_pkun_event")}
+	__log("Ran deprecated syncing function!", logType.warning.deprecated)
 }
 
 /// @function _cb_sync_pkun
@@ -2595,7 +2751,10 @@ function sync_pkun_event() {
 /// @param {number} src_sock Source sock
 /// @description Sends pkun sync packet to all clients. Leave params blank and it will send server's own pkun update packet.
 function _cb_sync_pkun(uuid = "", tx = -4, tdx = -4, ty = -4, tdir = -4, thiding = -4, src_sock = -1) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/_cb_sync_pkun")}
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/_cb_sync_pkun")}
+	__log("Ran deprecated syncing function!", logType.warning.deprecated)
+	exit;
+	
 	if (!check_is_server() || !instance_exists(obj_pkun) || room = rm_intro || room = rm_title) {
 		exit; // only run as server and if we have moved
 	}
@@ -2669,82 +2828,24 @@ function _cb_sync_flashlight(pid, flash) {
 	if (!check_is_server()) {
 		exit; // only run as server
 	}
-	var target_socks = array_without(struct_get_names(obj_multiplayer.server.clients), string(pid_to_sock(pid)))
+	
+	var target_socks = struct_get_names(obj_multiplayer.server.clients)
+	if !(pid == obj_multiplayer.server.player.pid) // avoid cannot find pid warning
+		target_socks = array_without(target_socks, string(pid_to_sock(pid)))
 	do_packet(new PLAY_CB_TOGGLE_FLASHLIGHT(pid, flash), target_socks)
 }
 
 function _cb_sync_mobs() {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/_cb_sync_mobs")}
+	__log("Ran deprecated syncing function!", logType.warning.deprecated)
 	with (obj_p_mob) {
 		_cb_sync_mob()
 	}	
 }
 
 function _cb_sync_mob() {
-	exit;
-	
-	var hist = global.multiplayer_entity_sync_hist
-	
-	if (((controlled == 0) && (!check_is_server())) || room = rm_intro || room = rm_title) {
-//		show_debug_message("_cb_sync_mob: Didn't send since is client or in wrong room.")
-		exit; // only run as server and not in title or anything
-	}
-	if (is_undefined(self[$ "entity_id"]) || is_undefined(self[$ "dir"])) {
-		exit;
-	}
-	if is_undefined(hist[$ entity_id]) && (entity_id != "" ){
-		struct_set(hist, entity_id, [-4, 0, -4, 1, 0, 0])	
-	}
-	
-//	show_debug_message("CB_SYNC_MOB INSIDE INSTANCE " + string(id))
-	if !is_array(hist[$ entity_id])
-		exit;
-	var last_x = hist[$ entity_id][0]
-	var last_dx = hist[$ entity_id][1]
-	var last_y = hist[$ entity_id][2]
-	var last_dir = hist[$ entity_id][3]
-	var last_state = hist[$ entity_id][4]
-	var check = hist[$ entity_id][5]
-	
-	var msg = ""
-	
-	// x doesnt matter here since we apply dx and stuff, we will sync x on packet updates regardless
-	if (last_state == state) && (last_y == y) && (last_dir == dir) && (last_dx == dx) {
-		if !(last_state == state)
-			msg+= "\nState Changed"
-		if !(last_y == y)
-			msg+= "\nY Changed"
-		if !(last_dir == dir)
-			msg+= "\nDIR Changed"
-		if !(last_dx == dx)
-			msg+= "\nDX Changed"
-			
-//		show_debug_message("_cb_sync_mob (mob: " + string(object_get_name(object_index)) + "), differences:" + msg)
-		
-		if check { // we did do the last update
-//			show_debug_message("SKIPPING MOB UPDATE, ALREADY SENT LAST UPDATE PACKET (" + string(object_get_name(object_index)) + ")")
-			exit;
-		} else {
-//			show_debug_message("SENDING LAST MOB UPDATE PACKET, DIDNT MOVE THO (" + string(object_get_name(object_index)) + ")")
-			check = 1
-		}
-	} else {
-		check = 0 // pos changed	
-	}
-	
-	struct_set(global.multiplayer_entity_sync_hist, entity_id, [x, dx, y, dir, state, check])	
-	self.last_move_speed = self.move_speed
-	
-	if check_is_server() {
-//		show_debug_message("SENDING MOB POS UPDATE PACKET (SERVER TO CLIENT) (" + string(object_get_name(object_index)) + ")")
-		var target_socks = struct_get_names(obj_multiplayer.server.clients)
-		if !(controlled == 0) // dont send it to controller, causes issues
-			target_socks = array_without(target_socks, controlled)
-		do_packet(new PLAY_CB_MOVE_ENTITY_POS(entity_id, x, abs(dx), y, dir, state, object_index), target_socks)
-	} else {
-//		show_debug_message("SENDING MOB POS UPDATE PACKET (CLIENT TO SERVER) (" + string(object_get_name(object_index)) + ")")
-		do_packet(new PLAY_SB_MOVE_ENTITY_POS(-1, entity_id, x, abs(dx), y, dir, state), obj_multiplayer.network.server.connection)	
-	}
-	_pcnt++
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/_cb_sync_mob")}
+	__log("Ran deprecated syncing function!", logType.warning.deprecated)
 }
 
 function sync_hscene_event() {
@@ -2881,12 +2982,12 @@ function update_pkun_mini_msg_event() {
 }
 
 function generate_game_state_packet(sock) {
-	var __log = function(msg, type = logInfoType) {log(msg, type, "FUNC/generate_game_state_packet")}
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/generate_game_state_packet")}
 	__log("Starting Game State Packet Generation... (For sock " + string(sock) + ")")
 	var GSA = [] // game state array
 	var IA = [] // interactables array
 	var PA = [] // players array
-	var MA = [] // mobs array
+	var EA = [] // mobs array
 	var CI = [] // client info
 	var SI = [] // server info
 	
@@ -2911,67 +3012,63 @@ function generate_game_state_packet(sock) {
 	}
 	__log("Generated Interactables Array! IA: " + string(IA))
 	
-	// generate player array ([ username, uuid, pos, hiding, flash ])
+	// generate player array ([ username, x, dx, y, dir, pid, flash, hiding])
 	__log("Generating Players Array...")
-	var _clients = struct_get_names(obj_multiplayer.server.clients)
-	var _network_objs = obj_multiplayer.network.entities
-	for (var i = 0; i < array_length(_clients); i++) {
-		var __client = _clients[i]
-		if (__client == string(sock))
-			continue;
-		var _inst = []
-		var _u = "unsetUsername_GGSA_" + string(__client)
-		var _pid = obj_multiplayer.network.players[$ __client]
-		var _pos = [-4, 0, -4, 1]
-		var _hiding = 0
-		var _flash = 0
-		with (sock_to_inst(__client)) {
-			_u = nametag
-			_pid = entity_id		
-			_pos = [x, dx, y, dir]
-			_hiding = hiding
-			_flash = flashOn
-		}
-		
-		array_push(_inst, _u)
-		array_push(_inst, _pid)
-		array_push(_inst, _pos)
-		array_push(_inst, _hiding)
-		array_push(_inst, _flash)
+	var _players = struct_get_names(obj_multiplayer.network.players)
+	
+		// add server pkun if needed
+	if !(struct_exists(obj_multiplayer.network.players, obj_multiplayer.server.player.pid)) {
+		var __pid = obj_multiplayer.server.player.pid
+		var _username = string(obj_multiplayer.server.player.username)
+		var _inst = [_username, 0, 0, 0, 1, __pid, 1, 0]
 		array_push(PA, _inst)
+		__log(" - (server obj_pkun doesn't exist yet) Added '" + _username + "' (" + string(__pid) + ") -- inst: " + string(_inst))
 	}
-		// add server pkun
-//	if instance_exists(obj_pkun) {
-		var _inst = []
-		array_push(_inst, obj_multiplayer.server.player.username)
-		array_push(_inst, obj_multiplayer.server.player.pid)
-		var __x = (instance_exists(obj_pkun)) ? obj_pkun.x : -4
-		var __dx = (instance_exists(obj_pkun)) ? obj_pkun.dx : -4
-		var __y = (instance_exists(obj_pkun)) ? obj_pkun.y : -4
-		var __dir = (instance_exists(obj_pkun)) ? obj_pkun.dir : 1
-		var __hiding = (instance_exists(obj_pkun)) ? obj_pkun.dir : 0
-		array_push(_inst, [__x, __dx, __y, __dir])
-		array_push(_inst, __hiding)
-		array_push(_inst, global.flashOn)
+	
+	for (var i = 0; i < array_length(_players); i++) {
+		var __pid = _players[i]
+		var __plr = obj_multiplayer.network.players[$ __pid]
+		
+		var _inst = [string(__plr.username), __plr.__x, 0, __plr.__y, __plr.dir, __pid, 1, 0]
+		with (pid_to_inst(__pid)) {
+			_inst[1] = x
+			_inst[2] = abs(dx)
+			_inst[3] = y
+			_inst[4] = dir
+			if (variable_instance_exists(id, "flashOn"))
+				_inst[6] = flashOn
+			if (variable_instance_exists(id, "hiding"))
+				_inst[7] = hiding
+		}
 		array_push(PA, _inst)
-//	}
+		__log(" - Added '" + string(__plr.username) + "' (" + string(__pid) + ") -- inst: " + string(_inst))
+	}
 	__log("Generated Players Array! PA: " + string(PA))
 	
-	// generate mobs array ([ uuid, pos, state, obj_index ])
-	__log("Generating Mobs Array...")
-	with (obj_p_mob) {
-		var _inst = []
-		array_push(_inst, variable_instance_exists(id, "entity_id") ? entity_id : "")
-		array_push(_inst, [x, variable_instance_exists(id, "dx") ? dx : 0, y, dir])
-		array_push(_inst, variable_instance_exists(id, "state") ? state : 0)
-		array_push(_inst, object_index)
-		array_push(MA, _inst)
+	// generate entities array ([ eid, x, dx, y, dir, state, obj_index ])
+	__log("Generating Entities Array...")
+	var _entities = struct_get_names(obj_multiplayer.network.entities)
+	for (var i = 0; i < array_length(_players); i++) {
+		var __eid = _players[i]
+		var __entitiy = obj_multiplayer.network.entities[$ __eid]
+		var _inst = [__eid, -4, 0, -4, 1, 0, -4]
+		with (eid_to_inst(__eid)) {
+			_inst[1] = x
+			_inst[2] = abs(dx)
+			_inst[3] = y
+			_inst[4] = dir
+			if (variable_instance_exists(id, "state"))
+				_inst[5] = state
+			_inst[6] = object_index
+		}
+		array_push(EA, _inst)
+		__log(" - Added '" + string(object_get_name(_inst[6])) + "' (" + string(__eid) + ") -- inst: " + string(_inst))
 	}
-	__log("Generated Mobs Array! MA: " + string(MA))
+	__log("Generated Entities Array! EA: " + string(EA))
 	
 	// generate client info
 	__log("Generating Client Info...")
-	array_push(CI, obj_multiplayer.server.clients[$ sock].pid) // sock to pid
+	array_push(CI, sock_get(sock, "pid")) // sock to pid
 	__log("Generated Client Info! CI: " + string(CI))
 	
 	// generate server info
@@ -2980,5 +3077,5 @@ function generate_game_state_packet(sock) {
 	array_push(SI, obj_multiplayer.server.player.pid) // server's client uuid
 	__log("Generated Server Info! SI: " + string(CI))
 	
-	return new LOAD_GAME_CB_GAME_STATE(GSA, IA, PA, MA, CI, SI)
+	return new LOAD_GAME_CB_GAME_STATE(GSA, IA, PA, EA, CI, SI)
 }

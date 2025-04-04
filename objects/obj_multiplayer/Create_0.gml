@@ -1,7 +1,3 @@
-#macro logInfoType "INFO"
-#macro logWarningType "WARNING"
-#macro logErrorType "ERROR"
-
 #macro BUFFER_SEGMENT_BITS 0x7F
 #macro BUFFER_CONTINUE_BIT 0x80
 #macro buffer_custom_datatype_start 32
@@ -188,11 +184,16 @@ network = {
 		connection: -1,
 		connected: 0
 	},
+	settings: {
+		max_pps_goal: 15		
+	},
 	timers: {
 //		pkt: {},
 	},
 //	client: {},
-	statistics: {},
+	statistics: {
+		pps: 0 // packets per second
+	},
 	entities: {
 		// entity_id (EID) -> entity constructor
 	},
@@ -239,11 +240,12 @@ client = {
 	}
 }
 
-_log = function(msg = "??EMPTY_MESSAGE??", type = logInfoType, show_on_screen = 0) {
+_log = function(msg = "??EMPTY_MESSAGE??", type = logType.info.def, show_on_screen = 0) {
 	log("[" + ((network.role == NETWORK_ROLE.SERVER) ? "SERVER" : "CLIENT") + "]: " + msg, type)
 }
 
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
+add_timer("RESET_PPS", adjust_to_fps(1), 60, [struct_set, [obj_multiplayer.network.statistics, "pps", 0]], 1, 0)
 
 
 // actual game shit

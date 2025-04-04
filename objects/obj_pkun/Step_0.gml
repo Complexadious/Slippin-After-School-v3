@@ -11,7 +11,7 @@ hs_hide_fl = global.hscene_hide_fl
 hscene_target = global.hscene_target
 hs_mob_id = (hscene_target != -4) ? global.hscene_target.mob_id : 0
 	
-var cam_target_is_pkun = instance_exists(obj_camera.camTarget) ? (!((obj_camera.camTarget != noone) && (obj_camera.camTarget.object_index != obj_pkun))) : 1
+var cam_target_is_pkun = (instance_exists(obj_camera) && instance_exists(obj_camera.camTarget) ? (!((obj_camera.camTarget != noone) && (obj_camera.camTarget.object_index != obj_pkun))) : 1)
 
 // constantly sync miniMsgStr
 update_pkun_mini_msg_event()
@@ -64,7 +64,9 @@ if immortal = 0
 
 //	instance_create_depth(x, y, depth, obj_global.timeStop_fx)
 
-var nearest = (cam_target_is_pkun) ? instance_nearest(x, y, obj_interactable) : instance_nearest(obj_camera.camTarget.x, obj_camera.camTarget.y, obj_interactable)
+var _ni = instance_nearest(x, y, obj_interactable)
+var nearest = (cam_target_is_pkun) ? _ni : ((is_controlling_cam_target()) ? instance_nearest(obj_camera.camTarget.x, obj_camera.camTarget.y, obj_interactable) : _ni)
+
 if global.trans_spd != adjust_to_fps(0.05)
 	global.trans_spd = adjust_to_fps(0.05)
 if !audio_is_playing(bgm_rain_inside) && (room = rm_game || room == rm_gallery)
@@ -73,14 +75,15 @@ if keyboard_check_pressed(ord("I")) && global.game_debug
 	global.clock_min+= adjust_to_fps(1)
 if keyboard_check_pressed(ord("O")) && global.game_debug
 	global.clock_min-= adjust_to_fps(1)
-if (distance_to_object(nearest) < 50) || !cam_target_is_pkun
+if (distance_to_object(nearest) < 50) || !(cam_target_is_pkun && is_controlling_cam_target())
 {
     if (intrTarget != nearest)
     {
         intrTarget = nearest
         intrDone = 0
     }
-    intrNeed = (cam_target_is_pkun) ? (nearest.need * (global.flashOn ? 1 : 1.5)) : 0 // instant
+	var _intrspd = (nearest.need * (global.flashOn ? 1 : 1.5))
+    intrNeed = (cam_target_is_pkun) ? _intrspd : ((is_controlling_cam_target()) ? 0 : _intrspd) // instant
 }
 else
 {
@@ -88,7 +91,7 @@ else
     intrDone = 0
     intrNeed = 0
 }	
-var n = (noclip) ? obj_intr_portal : portal_nearest((cam_target_is_pkun) ? id : obj_camera.camTarget.id)
+var n = (noclip) ? obj_intr_portal : portal_nearest((cam_target_is_pkun) ? id : ((is_controlling_cam_target()) ? obj_camera.camTarget.id : id))
 if (np != n)
 {
     np = n
@@ -147,7 +150,7 @@ if (!game_is_paused())
 			
 				// update pkun pos
 				if (last_movement_key != vk_left) || (last_move_speed != move_speed){
-					sync_pkun_event()	// we moved, speed is different
+					// sync_pkun_event()	// we moved, speed is different
 				}
 	//			else
 	//				show_debug_message("VK_LEFT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
@@ -222,7 +225,7 @@ if (!game_is_paused())
 		
 				// update pkun pos
 				if (last_movement_key != vk_right) || (last_move_speed != move_speed){
-					sync_pkun_event()	// we moved, speed is different
+					// sync_pkun_event()	// we moved, speed is different
 				}			
 	//			else
 	//				show_debug_message("VK_RIGHT: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
@@ -291,7 +294,7 @@ if (!game_is_paused())
 	//		show_debug_message("VK_NONE: Not updating! (last_key = " + string(last_movement_key) + ", last_move_speed = " + string(last_move_speed) + ", move_speed = " + string(move_speed) + ")")
 	        set_sprite(spr_pkun_idle, (1/3))
 			if (last_move_speed != move_speed)
-				sync_pkun_event() // stopped moving
+				// sync_pkun_event() // stopped moving
 			last_movement_key = -4
 			move_speed = 0
 			last_move_speed = 0
@@ -313,7 +316,7 @@ if (!game_is_paused())
             {
                 if (adjust_to_fps(intrDone) >= adjust_to_fps(intrNeed))
                 {
-					sync_pkun_event()
+					// sync_pkun_event()
 					interact_event()
 //					if is_multiplayer()
 //						send_client_interact_request_packet(intrTarget)
@@ -333,7 +336,7 @@ if (!game_is_paused())
 	                            }
 								baldi_add_tracer()
 	                        }
-						} else {
+						} else if (is_controlling_cam_target()) {
 							with (obj_camera.camTarget) {
 								if variable_instance_exists(id, "trace_i")
 									mob_use_portal()

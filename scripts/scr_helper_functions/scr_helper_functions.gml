@@ -1,7 +1,7 @@
-function log(msg, type = logInfoType, src = "UNKNOWN") {
+function log(msg, type = logType.info.def, src = "UNKNOWN") {
 	var _t = string_upper(string(type))
 	if ((self) && (struct_exists(self, "object_index")))
-		src = (object_get_name(object_index))
+		src = (object_get_name(object_index)) + "/" + src
 	var _ts = "[" + string(current_hour) + "H:" + string(current_minute) + "M:" + string(current_second) + "S:" + string(current_time) + "] "
 	show_debug_message(_ts + "[" + src + "] [" + string(type) + "]: " + string(msg))	
 }
@@ -81,6 +81,9 @@ function value_to_datatype(value) {
 			return buffer_undefined	
 		}
 		case "struct": {
+			// check if it is custom dt wrapper shit
+			if is_dt_wrapper(value)
+				return value.__data_type
 			return buffer_undefined	
 		}
 		case "ref": {
@@ -307,6 +310,12 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 			for (var i = 0; i < _len; i++) {
 				var _dt = value_to_datatype(value[i])
 				var _val = value[i]
+				
+				// properly get value if dt_wrapper
+				if is_dt_wrapper(_val) {
+					show_debug_message("buffer_write_ext: Writing a DT_WRAPPER value!!")	
+					_val = _val.__data
+				}
 				
 				if (is_array(schema)) {
 					if (is_array(_val)) && (array_length(schema) == array_length(_val)) {

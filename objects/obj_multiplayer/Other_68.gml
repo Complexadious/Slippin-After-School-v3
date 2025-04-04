@@ -14,21 +14,6 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 			var _pid = (struct_names_count(server.clients) + 1) // add 1 to account for server pid being 0
 			var username = "unsetUsername_" + string(_pid)
 			struct_set(server.clients, string(sock), {pid: _pid, connection_state: CONNECTION_STATE.CONNECT})
-//			var _player = new player_entity(username, -4, -4, 1, {}, _pid)
-//			_player.create()
-
-//			if is_undefined(sock_to_inst(sock)) {
-//				_log("Sock (" + string(sock) + ") doesn't have a network object!", logWarningType)
-				
-////				var target_socks = array_without(struct_get_names(server.clients), sock)
-//				//do_packet(new PLAY_CB_CREATE_ENTITY(no.entity_uuid, -4, 0, -4, 0, no.object_index), target_socks)
-//				//do_packet(new PLAY_CB_MOVE_ENTITY_POS()(no.entity_uuid, -4, 0, -4, 0, no.object_index), target_socks)
-////				do_packet(new PLAY_CB_MOVE_ENTITY_POS(no.entity_uuid, no.x, no.dx, no.y, no.dir, 0, no.object_index), target_socks)
-//			}
-			
-//			for (var i = 0; i < array_length(struct_get_names(server.clients)); i++) {
-//				do_packet(generate_game_state_packet(struct_get_names(server.clients)[i]), struct_get_names(server.clients)[i]) //sock)
-//			}
 			break;	
 		}
 		case network_type_disconnect: {
@@ -43,9 +28,9 @@ if ((event_id > -1)) { // == network.server.socket) || (event_id == network.serv
 			var _tn = (string(sock) + "_SEND_KEEPALIVE_TIMER")
 			if struct_exists(network.timers, _tn) {
 				struct_remove(network.timers, _tn)
-				packetLog("Removed '" + _tn + "' timer.")
+				_log("Removed '" + _tn + "' timer.")
 			} else {
-				packetLog("No '" + _tn + "' timer to remove?", "WARNING")
+				_log("No '" + _tn + "' timer to remove?", "WARNING")
 			}
 			
 			//server_disconnect(sock)

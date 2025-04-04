@@ -526,7 +526,7 @@ if (!global.game_is_over) && !multiplayer_menu_open
         {
             global.menu_mode = 1
             play_se(se_menu, 1)
-			sync_pkun_event()
+			// sync_pkun_event()
         }
     }
     else if ((global.menu_mode == 1))

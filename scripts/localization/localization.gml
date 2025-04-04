@@ -87,6 +87,60 @@ function pkun_get_location(argument0) //gml_Script_pkun_get_location
     return str;
 }
 
+function get_location(x, y, include_floor = 1) //gml_Script_pkun_get_location
+{
+    var str = ""
+    var flr = 1
+    var px = 0
+    var py = 0
+    if (room == rm_game)
+    {
+		var nearest_room = instance_nearest(x, y, obj_room_identifier)
+		if (place_meeting(x, y, nearest_room)) || (distance_to_object(nearest_room) < 50)
+		{
+			return nearest_room.room_name
+		}
+		else
+		{
+	        px = x
+	        py = y
+	        flr = ((floor((py / 720)) % 3) + 1)
+	        if include_floor
+	            str += (string(flr) + "F ")
+	        if ((py < 2160))
+	            str += getText("map_hall")
+	        else if ((py < 4320))
+	        {
+	            if ((px < 3500))
+	                str += ((string(flr) + "-A") + getText("map_class"))
+	            else if ((px < 6500))
+	                str += ((string(flr) + "-B") + getText("map_class"))
+	            else if ((px < 9500))
+	                str += ((string(flr) + "-C") + getText("map_class"))
+	            else if ((flr == 1))
+	                str += getText("map_staff")
+	            else if ((flr == 2))
+	                str += getText("map_lab")
+	            else if ((flr == 3))
+	                str += getText("map_art")
+	        }
+	        else if ((px < 2800))
+	            str += getText("map_toilet_m")
+	        else
+	            str += getText("map_toilet_f")
+		}
+    }
+	else
+	{
+		str = "in_unknown_room"	
+	}
+    return str;
+}
+
+function get_floor(y, floors = 3, floor_height = 720) {
+	return ((floor((y / floor_height)) % floors) + 1)	
+}
+
 function intr_get_text(argument0) //gml_Script_intr_get_text
 {
     var str = ""
