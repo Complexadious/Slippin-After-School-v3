@@ -1,4 +1,4 @@
-var current_target = get_closest_target(x, y, id)
+// var current_target = get_closest_target(x, y, id)
 
 if (shake > 0)
     shake-= adjust_to_fps(1)

@@ -12,3 +12,5 @@ ry = 0
 hide_fl = 0
 shadow = 1
 image_speed = 0
+
+current_target = obj_pkun

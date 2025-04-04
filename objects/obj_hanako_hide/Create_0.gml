@@ -14,3 +14,4 @@ hide_timer = 0
 hide_ban = 3600
 ani_index = 0
 ani_timer = 0
+current_target = obj_pkun

@@ -11,4 +11,4 @@ xx = x
 yy = (y - 250)
 shake = 0
 locked = 0
-var current_target = get_closest_target(x, y, id)
+current_target = obj_pkun

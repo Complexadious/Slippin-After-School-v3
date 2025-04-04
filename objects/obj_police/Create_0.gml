@@ -14,3 +14,4 @@ stopTimer = irandom_range(180, 270)
 play_se(se_whistle_caught, 1)
 x = obj_pkun.x
 y = obj_pkun.y
+current_target = obj_pkun

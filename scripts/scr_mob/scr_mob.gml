@@ -1,3 +1,31 @@
+function closest_floor_target() {
+	var _curr_flr = get_floor(y)
+	var _targets = {}
+	var _dists = []
+			
+	with (obj_multiplayer) {
+		var _players = struct_get_names(network.players)
+		
+		// gather all players on the same floor
+		for (var i = array_length(_players) - 1; i >= 0 ; i--) {
+			var _pid = _players[i]
+			var _player_inst = pid_to_inst(_pid)
+			if (_curr_flr == get_floor(_player_inst.y)) {
+				var _dist = abs(other.x - _player_inst.x)
+				if (_dist > global.mob_sight_range)
+					continue; // only allow ones within range
+				struct_set(_targets, string(_dist), _player_inst.id)
+				array_push(_dists, _dist)
+			}
+		}
+		
+		// see who's closest
+		var _closest = _targets[$ string(script_execute_ext(min, _dists))] ?? obj_pkun
+		return _closest
+	}
+	return obj_pkun
+}
+
 function can_client_mob_move() {
 	if (controlled == -1) //(controlled == -1) || ((controlled == 0) && check_is_server()) // (-1 here means its owned by self, 0 means unowned, other numbers mean sock owner) if controlled, no, no matter what
 		return 0
@@ -112,7 +140,9 @@ function target_is_near_obj(arg0) //gml_Script_target_is_near_obj
 
 function target_is_near() //gml_Script_target_is_near
 {
-	var current_target = get_closest_target(x, y, id)
+	if !variable_instance_exists(id, "current_target") {
+		current_target = obj_pkun	
+	}
 	
 	var _speaking_exception = (global.speaking && (distance_to_object(current_target) < 650))
 	if (_speaking_exception) {
@@ -125,7 +155,7 @@ function target_is_near() //gml_Script_target_is_near
 
 function hanako_hide() //gml_Script_hanako_hide
 {
-	var current_target = get_closest_target(x, y, id)
+	// var current_target = get_closest_target(x, y, id)
     var hd = -4
     var list = ds_list_create()
     var size = 0
@@ -385,7 +415,7 @@ function mob_track_trace() //gml_Script_mob_track_trace
 
 function mob_add_trace() //gml_Script_mob_add_trace
 {
-	var current_target = get_closest_target(x, y, id)
+	// var current_target = get_closest_target(x, y, id)
     if ((state == (2)) && (!lostTarget))// && (global.mob_trace_count > 0)
     {
         var i = 0
@@ -423,7 +453,7 @@ function point_near_portal(_x, _y, dist) {
 
 function mob_use_portal() //gml_Script_mob_use_portal
 {
-	var current_target = get_closest_target(x, y, id)
+	// var current_target = get_closest_target(x, y, id)
     var in = instance_nearest(x, y, obj_intr_portal)
     var lp = current_target.lp
     trace_p = in.port

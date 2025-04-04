@@ -4,3 +4,4 @@ if !variable_instance_exists(id, "locked")
 	locked = -4
 	
 passenger = -4
+closest_target = obj_pkun

@@ -15,6 +15,9 @@ logType = {
 	},
 }
 
+global.mob_sight_range = 1000
+global.mob_reaction_time = 15
+global.mob_force_switch_target_range = 600
 global.mob_updates_to_clients_on_different_floors = 0
 
 global.timeStop = 0

@@ -21,3 +21,4 @@ with (obj_pkun)
 }
 np = portal_nearest()
 lp = portal_linked(np)
+current_target = obj_pkun

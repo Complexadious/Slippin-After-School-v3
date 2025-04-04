@@ -8,4 +8,4 @@ icon = 2
 se = se_piano_slam
 xx = x
 yy = (y - 350)
-var current_target = get_closest_target(x, y, id)
+current_target = obj_pkun

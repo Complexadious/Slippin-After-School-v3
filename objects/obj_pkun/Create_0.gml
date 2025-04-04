@@ -5,6 +5,7 @@
 __cache = {}
 hidebox = -4
 player_id = 0
+current_target = obj_pkun
 
 flashOn = global.flashOn
 hscene_target = global.hscene_target

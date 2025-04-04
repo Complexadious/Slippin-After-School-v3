@@ -29,3 +29,5 @@ if (room = rm_forest)
 	if (role == "shota")
 		walk_sound = choose(se_gravel_step_1, se_gravel_step_2, se_gravel_step_3, se_gravel_step_4)
 }
+
+current_target = obj_pkun

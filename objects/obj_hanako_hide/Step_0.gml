@@ -1,4 +1,4 @@
-var current_target = get_closest_target(x, y, id)
+//// var current_target = get_closest_target(x, y, id)
 
 /// @description Insert description here
 // You can write your code in this editor

@@ -12,4 +12,4 @@ sprite_index = spr_item_flick
 image_speed = 1
 image_angle = irandom_range(-45, 45)
 itemid = 0
-var current_target = get_closest_target(x, y, id)
+current_target = obj_pkun

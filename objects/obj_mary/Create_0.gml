@@ -16,3 +16,4 @@ port = 0
 in = 0
 wait = 0
 loc = ""
+current_target = obj_pkun

@@ -11,4 +11,4 @@ yy = (y - 350)
 port = 0
 vsbl = 1
 locked = 1
-var current_target = get_closest_target(x, y, id)
+current_target = obj_pkun

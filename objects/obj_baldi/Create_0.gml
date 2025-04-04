@@ -17,3 +17,4 @@ frozen = 0
 
 move_speed = 4
 move = (can_client_mob_move()) ? move_speed : 0
+current_target = obj_pkun

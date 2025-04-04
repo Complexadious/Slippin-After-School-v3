@@ -18,3 +18,4 @@ spd = adjust_to_fps(1)
 
 move_speed = spd
 move = (can_client_mob_move()) ? move_speed : 0
+current_target = obj_pkun

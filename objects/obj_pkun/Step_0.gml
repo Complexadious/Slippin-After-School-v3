@@ -352,7 +352,7 @@ if (!game_is_paused())
                         hiding = 1
                         with (obj_p_mob)
                         {
-							var current_target = get_closest_target(x, y, id)
+							// var current_target = get_closest_target(x, y, id)
 							
                             if doTrack
                             {
