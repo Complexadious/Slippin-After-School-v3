@@ -14,12 +14,14 @@ logType = {
 		not_found: "ERROR NOT_FOUND"
 	},
 }
-
 global.mob_sight_range = 4000
 global.mob_reaction_time = 15
 global.mob_force_switch_target_range = 2000
-global.mob_updates_to_clients_on_different_floors = 0
+global.mob_updates_to_clients_on_different_floors = 1
 
+global.last_synced = {
+	clock_time: [-1, -1, -1, -1]
+}
 global.timeStop = 0
 global.timeStopCanMove = 1
 
@@ -63,6 +65,7 @@ global.data_type = {
 	inf: {id: _dto + 21, read: buffer_inf, write: buffer_inf},
 	pi: {id: _dto + 22, read: buffer_pi, write: buffer_pi},
 	nan: {id: _dto + 23, read: buffer_nan, write: buffer_nan},
+	struct: {id: _dto + 24, read: buffer_struct, write: buffer_struct},
 }
 
 // generate data_type ID lookup table shit for quick access
@@ -93,34 +96,44 @@ for (var i = 0; i < array_length(_test_nums); i++) {
 }
 
 // other test
-var __num = undefined
-var vintbuf = buffer_create(16, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
-buffer_seek(vintbuf, buffer_seek_start, 0)
-buffer_write_ext(vintbuf, buffer_undefined, __num)
-buffer_seek(vintbuf, buffer_seek_start, 0)
-show_debug_message("OTHER IS " + string(__num))
-show_debug_message("OTHER FR " + string(buffer_read_ext(vintbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
-buffer_delete(vintbuf)
+//var __num = undefined
+//var vintbuf = buffer_create(16, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
+//buffer_seek(vintbuf, buffer_seek_start, 0)
+//buffer_write_ext(vintbuf, buffer_undefined, __num)
+//buffer_seek(vintbuf, buffer_seek_start, 0)
+//show_debug_message("OTHER IS " + string(__num))
+//show_debug_message("OTHER FR " + string(buffer_read_ext(vintbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
+//buffer_delete(vintbuf)
+
+// struct test
+//var __struct = {"a": 1, "b": "string", "c": undefined}
+//var structbuf = buffer_create(16, buffer_grow, 1) //buffer_create(16, buffer_fixed, 1)
+//buffer_seek(structbuf, buffer_seek_start, 0)
+//buffer_write_ext(structbuf, buffer_struct, __struct)
+//buffer_seek(structbuf, buffer_seek_start, 0)
+//show_debug_message("STRUCT IS " + string(__struct))
+//show_debug_message("STRUCT FR " + string(buffer_read_ext(structbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
+//buffer_delete(structbuf)
 
 // varint test
-var __num = 5012
-var vintbuf = buffer_create(32, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
-buffer_seek(vintbuf, buffer_seek_start, 0)
-buffer_write_ext(vintbuf, buffer_vint, __num)
-buffer_seek(vintbuf, buffer_seek_start, 0)
-show_debug_message("VINT IS " + string(__num))
-show_debug_message("VINT FR " + string(buffer_read_ext(vintbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
-buffer_delete(vintbuf)
+//var __num = 5012
+//var vintbuf = buffer_create(32, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
+//buffer_seek(vintbuf, buffer_seek_start, 0)
+//buffer_write_ext(vintbuf, buffer_vint, __num)
+//buffer_seek(vintbuf, buffer_seek_start, 0)
+//show_debug_message("VINT IS " + string(__num))
+//show_debug_message("VINT FR " + string(buffer_read_ext(vintbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
+//buffer_delete(vintbuf)
 
 // uuid test
-var _uuid = generate_uuid4_string()
-var uuidbuf = buffer_create(32, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
-buffer_seek(uuidbuf, buffer_seek_start, 0)
-buffer_write_ext(uuidbuf, buffer_uuid, _uuid)
-buffer_seek(uuidbuf, buffer_seek_start, 0)
-show_debug_message("UUID IS " + _uuid)
-show_debug_message("UUID 16 " + string(buffer_read_ext(uuidbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
-buffer_delete(uuidbuf)
+//var _uuid = generate_uuid4_string()
+//var uuidbuf = buffer_create(32, buffer_fixed, 1) //buffer_create(16, buffer_fixed, 1)
+//buffer_seek(uuidbuf, buffer_seek_start, 0)
+//buffer_write_ext(uuidbuf, buffer_uuid, _uuid)
+//buffer_seek(uuidbuf, buffer_seek_start, 0)
+//show_debug_message("UUID IS " + _uuid)
+//show_debug_message("UUID 16 " + string(buffer_read_ext(uuidbuf)))//buffer_read_ext(uuidbuf, buffer_uuid)))
+//buffer_delete(uuidbuf)
 
 //var pos = [32767, 32767, 1, 0]
 //var posbuf = buffer_create(32, buffer_fixed, 1)
@@ -131,22 +144,14 @@ buffer_delete(uuidbuf)
 //show_debug_message("POS 32 " + string(buffer_read_ext(posbuf)))
 //buffer_delete(posbuf)
 
-var buffer_id = buffer_create(1024, buffer_fixed, 1);
-var original_array = [infinity, NaN, pi];
-buffer_write_ext(buffer_id, buffer_array, original_array)//, schema);
-buffer_seek(buffer_id, buffer_seek_start, 0);
-var read_array = buffer_read_ext(buffer_id) //buffer_read_ext(buffer_id, buffer_array, schema, 1)//, buffer_array, schema);
-show_debug_message("Original Array: " + string(original_array));
-show_debug_message("Read Array: " + string(read_array) + "size = " + string(buffer_tell(buffer_id)));
-buffer_delete(buffer_id);
-
-// Multiplayer stuff
-global.sync_hearts = 0
-global.sync_hscene = 0
-
-	// targetting shit
-global.targetting_update_tmr_dur = 600
-global.targetting_cached = {}
+//var buffer_id = buffer_create(1024, buffer_fixed, 1);
+//var original_array = [infinity, NaN, pi];
+//buffer_write_ext(buffer_id, buffer_array, original_array)//, schema);
+//buffer_seek(buffer_id, buffer_seek_start, 0);
+//var read_array = buffer_read_ext(buffer_id) //buffer_read_ext(buffer_id, buffer_array, schema, 1)//, buffer_array, schema);
+//show_debug_message("Original Array: " + string(original_array));
+//show_debug_message("Read Array: " + string(read_array) + "size = " + string(buffer_tell(buffer_id)));
+//buffer_delete(buffer_id);
 
 // Multiplayer menu state
 multiplayer_menu_open = false;

@@ -62,7 +62,7 @@ else
 	global.camera_hide_ui = 0	
 
 // command bar handler
-if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || (((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) && !global.command_bar_open) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) && ((room != rm_title) && (room != rm_intro)) && (!global.command_bar_open))) {
+if (keyboard_check_pressed(vk_escape) && global.command_bar_open) || (((keyboard_check_pressed(global.keybinds[$ "commandBarOpenCommand"]) && !global.command_bar_open) || keyboard_check_pressed(global.keybinds[$ "commandBarOpenChat"]) &&  (room != rm_intro) && (!global.command_bar_open))) {
 	keyboard_clear(global.keybinds[$ "commandBarOpenChat"])
 	keyboard_clear(keyboard_key)
 	keyboard_key = 0

@@ -1,5 +1,23 @@
 /// @description Insert description here
 // You can write your code in this editor
+audio_stop_all()
+show_debug_message("CREATING PKUN!!");
+
+reset_vkf12 = 0
+if (is_multiplayer() && !check_is_server()) && (global.dialog_mode) {
+	global.dialog_num_curr = (global.dialog_num_total + 1)
+	global.transition = 0
+	global.trans_alp = 0
+	keyboard_key_press(vk_f12)
+	reset_vkf12 = 1
+}
+
+with (obj_pkun) {
+	if (id != other.id)	{
+		show_debug_message("DESTROYING DUPLICATE PKUN!!");
+		instance_destroy();	
+	}
+}
 
 // multiplayer stuff
 __cache = {}
@@ -22,9 +40,6 @@ last_movement_key = -4
 last_move_speed = 0
 
 entity_uuid = ""
-
-audio_stop_all()
-show_debug_message("CREATING PKUN!!");
 //depth = -3
 if (!instance_exists(obj_camera))
     cam = instance_create_depth((x - 400), (y - 200), 0, obj_camera)

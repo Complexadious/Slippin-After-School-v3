@@ -84,7 +84,7 @@ function value_to_datatype(value) {
 			// check if it is custom dt wrapper shit
 			if is_dt_wrapper(value)
 				return value.__data_type
-			return buffer_undefined	
+			return buffer_struct	
 		}
 		case "ref": {
 			return buffer_u64
@@ -102,6 +102,8 @@ function id_to_datatype(id) {
 }
 
 function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip = 0) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/buffer_read_ext")}
+	
     var value;
     var position = 0;
     var currentByte;
@@ -116,7 +118,7 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			// check if we are still within bounds
 			var _buffsize = buffer_get_size(buffer_id)
 			if (buffer_tell(buffer_id) >= _buffsize ) {
-				show_debug_message("TRIED READING OUTSIDE OF BUFFER RANGE!!!!! WTF!!!!!")
+				__log(" [undefined]: TRIED READING OUTSIDE OF BUFFER RANGE!!!!! WTF!!!!!")
 				exit;	
 			}
 			
@@ -195,11 +197,9 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 			// array len
 			var _len = buffer_read_ext(buffer_id)
 			var _array = []
-			show_debug_message("buffer_read_ext: ARRAY LEN IS " + string(_len))
 			for (var i = 0; i < _len; i++) {
 				array_push(_array, buffer_read_ext(buffer_id))
 			}
-			
 			return _array
 	    }
 		case buffer_undefined: {
@@ -214,6 +214,23 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 		case buffer_nan: {
 			return NaN	
 		}
+		case buffer_struct: {
+			var _variables = buffer_read_ext(buffer_id)
+			var _values = buffer_read_ext(buffer_id)
+			var _struct = {}
+			if (!is_array(_variables) || !is_array(_values)) {
+				__log(" [buffer_struct]: ERROR!!! VARIABLES, VALUES, OR BOTH ARE NOT ARRAYS")
+				return {}
+			}
+			if !(array_length(_variables) == array_length(_values)) {
+				__log(" [buffer_struct]: ERROR!!! VARIABLES AND VALUES ARRAYS ARE DIFFERENT LENGTHS!")
+				return {}
+			}
+			for (var i = 0; i < array_length(_variables); i++) {
+				struct_set(_struct, _variables[i], _values[i])
+			}
+			return _struct
+		}
         default: {
             return buffer_read(buffer_id, type);
         }
@@ -221,6 +238,7 @@ function buffer_read_ext(buffer_id, type = undefined, schema = undefined, skip =
 }
 
 function buffer_write_ext(buffer_id, type, value, schema = undefined) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/buffer_write_ext")}
 	switch type {
 		case buffer_vint: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.varint.id)
@@ -313,7 +331,7 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 				
 				// properly get value if dt_wrapper
 				if is_dt_wrapper(_val) {
-					show_debug_message("buffer_write_ext: Writing a DT_WRAPPER value!!")	
+					__log(" [buffer_array]: Writing a DT_WRAPPER value!!")	
 					_val = _val.__data
 				}
 				
@@ -325,7 +343,7 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 						}
 						continue;
 					} else {
-						show_debug_message("buffer_write_ext: Cannot write this array! Schema and Val are incompatible!")	
+						__log(" [buffer_array]: Cannot write this array! Schema and Val are incompatible!")	
 					}
 				} else if (schema != undefined) {
 					_dt = schema // all same dt
@@ -350,6 +368,21 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 		}
 		case buffer_nan: {
 			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.nan.id)
+			break;
+		}
+		case buffer_struct: {
+			buffer_write(buffer_id, BUFFER_DT_ID_TYPE, global.data_type.struct.id)
+			if !is_struct(value) {
+				__log(" [buffer_struct]: Tried to write non-struct as a struct! value: " + string(value)) 
+				break;
+			}
+			var _vars = struct_get_names(value)
+			buffer_write_ext(buffer_id, buffer_array, _vars)
+			var _vals = []
+			for (var i = 0; i < array_length(_vars); i++) {
+				array_push(_vals, value[$ _vars[i]])	
+			}
+			buffer_write_ext(buffer_id, buffer_array, _vals)
 			break;
 		}
 		default: {
@@ -532,13 +565,13 @@ function array_without(array, value) {
 	return _arr
 }
 
-function play_se_at(se, x, y) {
+function play_se_at(se, x, y, vol = 1) {
 	if (se == -4) {
 		show_debug_message("play_se_at(" + string(se) + ", " + string(x) + ", " + string(y)+ "): Attempted to play -4 as sound! Cancelling!")
 		exit;
 	}
 	if !instance_exists(obj_pkun) {
-		play_se(se, 1)
+		play_se(se, vol)
 		exit;
 	}
     audio_falloff_set_model(4)
@@ -546,7 +579,7 @@ function play_se_at(se, x, y) {
     if _near
     {
         var _se = audio_play_sound_at(se, (obj_pkun.x + (obj_pkun.x - x)), y, 0, 100, 3000, 1, false, 1)
-        audio_sound_gain(_se, (global.vol_se / 100), 0)
+        audio_sound_gain(_se, (global.vol_se / 100) * vol, 0)
     }
     else
     {
@@ -555,7 +588,7 @@ function play_se_at(se, x, y) {
         if ((np != noone) && (lp != noone) && (!(collision_line(x, y, lp.x, lp.y, obj_wall, false, true))))
         {
             var _se = audio_play_sound_at(se, (obj_pkun.x + (1.5 * ((obj_pkun.x - np.x) + (lp.x - x)))), ((obj_pkun.y - 1600) - (2 * abs((lp.x - x)))), 300, 100, 6000, 1.5, false, 1)
-            audio_sound_gain(_se, (global.vol_se / 100), 0)
+            audio_sound_gain(_se, (global.vol_se / 100) * vol, 0)
         }
     }
 }

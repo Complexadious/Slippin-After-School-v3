@@ -6,3 +6,10 @@ if (controlled != 0) {
 	draw_set_font(fnt_minecraft)
 	draw_text(x, y - sprite_height, "CONTROLLED: " + string(controlled))
 }
+
+if (__disable_ai > 0) {
+	draw_set_align(fa_center, fa_middle)
+	draw_set_color(c_red)
+	draw_set_font(fnt_minecraft)
+	draw_text(x, y - (sprite_height + 20), "AI DISABLED: " + string(__disable_ai))
+}

@@ -5,8 +5,9 @@ switch network_obj_type {
 		
 		// mimic some pkun variables
 		running = (adjust_to_fps(abs(dx)) > 4)
-		nametag_y = (y - (sprite_height - 25))
-		miniMsgY = (y - (sprite_height - 25))
+		nametag_y = (instance_exists(hidebox)) ? (hidebox.y - (hidebox.sprite_height)) : (y - (sprite_height - 25))
+		miniMsgY = (instance_exists(hidebox)) ? (hidebox.y - (hidebox.sprite_height)) : (y - (sprite_height - 25))
+		
 		var n = (noclip) ? obj_intr_portal : portal_nearest(id)
 		if (np != n)
 		{
@@ -64,10 +65,10 @@ switch network_obj_type {
 	    {
 	        soundDelay = (5)
 			var _i = random_range(0, array_length(se_step))
-	        play_se(se_step[_i], (0.35 + 0.25 * running))
+	        play_se_at(se_step[_i], x, y, (0.35 + 0.25 * running))
 	        if ((!((y < 720 && x > 6540 && x < 8810))) && chance(50))
 				_i = random_range(0, array_length(se_creak))
-	            play_se(se_creak[_i], (0.3 + 0.2 * running))
+	            play_se_at(se_creak[_i], x, y, (0.3 + 0.2 * running))
 	    }
 		
 		// guess current sprite based off of speed

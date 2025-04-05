@@ -1,5 +1,4 @@
-/// @description Insert description here
-// You can write your code in this editor
+var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true)
 
 // if controlled, do movement
 if (controlled == -1) {
@@ -16,28 +15,24 @@ if (controlled == -1) {
 		dx = 0
 		last_move_speed = 0
 	}
+} else if (__disable_ai > 0) { // maybe not when controlled?
+	__disable_ai -= adjust_to_fps(1)
+	if !(abs(x - target_x) < move_speed) && (can_move) { // dont go past target x and only move when can
+		var _ndir = (x < target_x) ? 1 : -1
+		if (dir != _ndir)
+			mob_set_dir(_ndir)
+		mob_move(move_speed * _ndir)
+	}
+	if (trace_i > -1) && ((abs((x - trace_x[trace_i])) < 50) && (abs((y - trace_y[trace_i])) < 100)) {
+		mob_use_portal()
+		__disable_ai = 0
+	}
+	exit;
 }
 
-var can_move = !collision_rectangle(x + dx, y - 1, x, y + 1, obj_wall, false, true)
 if ((can_move) && !(can_client_mob_move())) // only apply dx for the client, fucks up server one
 	x += dx
 	
-// mobs only see players within 1000 px
-// target is closest within 1000 px
-// target is updated every 0.2 seconds for a reaction time
-// if target uses a portal, it will add a trace
-// will ignore other targettable instances, unless they are within 600 px
-// if they are within 600 px, target changes to them
-// else, it will go through normal targetting shit
-
-// state 0 = idle
-// state 1 = wander
-// state 2 = chasing
-
-// global.mob_sight_range = 1000
-// global.mob_reaction_time = 15
-// global.mob_force_switch_target_range = 600
-
 if (closest_target_curr > 0)
 	closest_target_curr-= adjust_to_fps(1)
 else

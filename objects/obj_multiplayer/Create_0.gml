@@ -21,6 +21,7 @@
 #macro buffer_pi buffer_custom_datatype_start + 10
 #macro buffer_nan buffer_custom_datatype_start + 11
 
+#macro buffer_struct buffer_custom_datatype_start + 12
 
 #macro BUFFER_DT_ID_TYPE buffer_u8
 #macro BUFFER_DT_ID_TYPE_BYTES 1
@@ -39,6 +40,13 @@
 #macro SERVER_PORT 25565
 #macro MAX_PACKET_SIZE 32768
 #macro MAX_PACKETS_PER_SECOND = 120
+
+// Event IDS
+enum EVENT_ID {
+	JIANSHI_SEAL,
+	HACHI_WARP,
+	POLICE_SWITCH
+}
 
 // Network Roles
 enum NETWORK_ROLE {
@@ -185,7 +193,7 @@ network = {
 		connected: 0
 	},
 	settings: {
-		max_pps_goal: 15		
+		max_pps_goal: 45	
 	},
 	timers: {
 //		pkt: {},
@@ -218,7 +226,7 @@ server = {
 		mobs: {}
 	},
 	player: {
-		pid: 0,
+		pid: -1,
 		entity_uuid: generate_uuid4_string(),
 		username: "unsetServerUsername"
 	}
@@ -246,6 +254,7 @@ _log = function(msg = "??EMPTY_MESSAGE??", type = logType.info.def, show_on_scre
 
 add_timer("MULTIPLAYER_LOG_TMR", adjust_to_fps(1), 60, undefined, 1, 0)
 add_timer("RESET_PPS", adjust_to_fps(1), 60, [struct_set, [obj_multiplayer.network.statistics, "pps", 0]], 1, 0)
+add_timer("RESET_MINI_MSG_TMR", adjust_to_fps(1), 300, [array_set, [global.multiplayer_pkun_sync_hist, 8, ""]], 1, 0)
 
 
 // actual game shit

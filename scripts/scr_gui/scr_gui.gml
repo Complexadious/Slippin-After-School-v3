@@ -107,11 +107,13 @@ function cmd_execute_command(input) {
 			break;
 		}
 		case "noclip": {
-			toggle_pkun_noclip()
+			if instance_exists(obj_pkun)
+				toggle_pkun_noclip()
 			break;
 		}
 		case "clip": {
-			toggle_pkun_noclip(0)
+			if instance_exists(obj_pkun)
+				toggle_pkun_noclip(0)
 			break;
 		}
 		case "speed": {
@@ -138,11 +140,13 @@ function cmd_execute_command(input) {
 			break;
 		}
 		case "immortal": {
-			obj_pkun.immortal = infinity
+			if instance_exists(obj_pkun)
+				obj_pkun.immortal = infinity
 			break;
 		}
 		case "mortal": {
-			obj_pkun.immortal = 0
+			if instance_exists(obj_pkun)
+				obj_pkun.immortal = 0
 			break;
 		}
 		case "restart": {
@@ -247,7 +251,7 @@ function cmd_execute_command(input) {
 				var _eval = cmd_evaluate_args([args[1]], type_lists)
 				if (_eval[1] != "")
 					msg = "Command '" + command + "' " + _eval[1] // somethings wrong, its an error
-				else
+				else if instance_exists(obj_pkun)
 				{
 					obj_pkun.miniMsgStr = args[0]
 					obj_pkun.miniMsgTmr = eval[0][0]
@@ -309,11 +313,40 @@ function cmd_execute_command(input) {
 				}
 			}
 			break;	
+		} case "give": {
+			var min_args = 1
+			if (array_length(args) < min_args)
+			{
+				msg = "Error: Command 'give' not enough args. (item_id)"
+				break;
+			}
+			else
+			{
+				// evaluate
+				var valid_item_range = [1, 6]
+				
+				var type_lists = ["real"]		
+				var _eval = cmd_evaluate_args([args[0]], type_lists)
+				if (_eval[1] != "")
+					msg = "Command '" + command + "' " + _eval[1] // somethings wrong, its an error
+				else
+				{
+					var _item_id = _eval[0][0]
+					if (_item_id >= valid_item_range[0]) && (_item_id <= valid_item_range[1]) {
+						item_add(_item_id)
+					} else {
+						msg = "Error: Invalid item id '" + string(_item_id) + "', range is " + string(valid_item_range[0]) + " to " + string(valid_item_range[1])
+					}
+				}
+			}
+			break;	
 		}
 	}
 	// log
-	obj_pkun.miniMsgStr = msg
-	obj_pkun.miniMsgTmr = 300
+	if instance_exists(obj_pkun) {
+		obj_pkun.miniMsgStr = msg
+		obj_pkun.miniMsgTmr = 300
+	}
 }
 
 function cmd_evaluate_args(args_to_eval, types, invalid_code=global.command_bar_evaluate_invalid_code) {

@@ -1,9 +1,6 @@
-//// var current_target = get_closest_target(x, y, id)
+event_inherited()
 
-/// @description Insert description here
-// You can write your code in this editor
-//if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
-if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) || actor
+if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()) && (__disable_ai <= 0)) || (actor)
 {
     if ((soundDelay > 0))
         soundDelay-= adjust_to_fps(1)
@@ -23,9 +20,10 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) || actor
         else if ((abs((target_x - x)) >= 350))
         {
             warpDelay = 300
-            //x += (adjust_to_fps(350) * dir)
 			mob_move(350 * dir, 0)
             mob_play_ds(se_warp)
+			if (is_multiplayer() && check_is_server())
+				entity_event_sync(EVENT_ID.HACHI_WARP, object_index)
         }
     }
     else
@@ -98,5 +96,3 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) || actor
 }
 else
     image_speed = 0
-
-event_inherited()

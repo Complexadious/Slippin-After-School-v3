@@ -219,7 +219,7 @@ if instance_exists(p)
 			with (obj_network_object) {
 				if (network_obj_type == "player") {
 					// additional x offset for hearts and name tag so they appear centerd on pkun
-					var x_offset = (5 * dir)
+					var x_offset = 0 //(5 * dir)
 					
 					// draw mini_msg_tmr
 					if ((miniMsgTmr > 0)) {

@@ -12,7 +12,7 @@ else if trans_alp_intro_correction_active
 // fix shit
 global.trans_spd = adjust_to_fps(0.01)
 
-if keyboard_check_pressed(vk_return) && !global.trans_goto
+if keyboard_check_pressed(vk_return) && !(global.trans_goto) && !(global.disable_game_keyboard_input)
 	global.trans_alp = 0
 
 instance_create_depth(random(1320), -50, 0, obj_efct_rain)
@@ -25,7 +25,7 @@ else
     zoom -= adjust_to_fps((zoom - 20 * global.transition) / 5)
 if (menu_alp >= 0.1 && (!global.setting_mode) && (!global.transition)) && !(obj_sys.multiplayer_menu_open)
 {
-    if keyboard_check_pressed(vk_return)
+    if keyboard_check_pressed(vk_return) && !(global.disable_game_keyboard_input)
     {
         play_se(se_select, 1)
         if (menu_ind == 0)
@@ -63,7 +63,7 @@ if (menu_alp >= 0.1 && (!global.setting_mode) && (!global.transition)) && !(obj_
     }
     else if (!global.key_delay)
     {
-        if keyboard_check(vk_up)
+        if keyboard_check(vk_up) && !(global.disable_game_keyboard_input)
         {
             key_pressed()
             play_se(se_select, 1)
@@ -81,7 +81,7 @@ if (menu_alp >= 0.1 && (!global.setting_mode) && (!global.transition)) && !(obj_
             else
                 menu_ind = 4
         }
-        else if keyboard_check(vk_down)
+        else if keyboard_check(vk_down) && !(global.disable_game_keyboard_input)
         {
             key_pressed()
             play_se(se_select, 1)

@@ -1,9 +1,9 @@
-//// var current_target = get_closest_target(x, y, id)
+event_inherited()
 var _is_server = check_is_server()
 
 /// @description Insert description here
 // You can write your code in this editor
-if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
+if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) && (__disable_ai <= 0)
 {
     if ((soundDelay > 0))
         soundDelay-= adjust_to_fps(1)
@@ -112,5 +112,3 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
-
-event_inherited()

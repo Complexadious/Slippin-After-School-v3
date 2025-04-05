@@ -77,6 +77,14 @@ switch network_obj_type {
 		miniMsgAlp = 0
 		miniMsgAlpAmt = 0.12
 		miniMsgY = (y - (sprite_height - 25)) - 5
+		
+		emulated_trans_alp = 0.9
+		emulated_trans_spd = adjust_to_fps(0.01)
+		emulated_trans_wait = 0
+		emulated_dialog_mode = 0
+		emulated_transition = 0
+		emulated_trans_remaining = (((emulated_trans_alp / emulated_trans_spd) * 2) + emulated_trans_wait)
+		
 		break;	
 	}
 	//case "mob": {

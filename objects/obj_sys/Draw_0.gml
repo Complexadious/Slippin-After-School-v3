@@ -913,7 +913,7 @@ if global.game_debug
 	if instance_exists(obj_pkun)
         debug_log += ((((((((((((((((((("\n===== Player =====\nlocation = " + string(pkun_get_location(1))) + "\nport = ") + string(obj_pkun.portalPort)) + "\nx = ") + string(obj_pkun.x)) + "\ny = ") + string(obj_pkun.y)) + "\nhs_stp = ") + string(obj_pkun.hs_stp)) + "\nhs_spr = ") + sprite_get_name(obj_pkun.hs_spr)) + "\nhs_ind = ") + string(obj_pkun.hs_ind)) + "\nhs_lp = ") + string(obj_pkun.hs_lp)) + "\nhs_snd_prev = ") + audio_get_name(obj_pkun.hs_snd_prev)) + "\nmob numbers = ") + string(instance_number(obj_p_mob)) + "\nroom = " + string(room))
     if global.dialog_mode
-        debug_log += ((((((((((("\n===== Dialog =====\ndialog_mode = " + string(global.dialog_mode)) + "\ndialog_name = ") + global.dialog_name) + "\ndialog_line = ") + global.dialog_line) + "\ndialog_num = ") + string(global.dialog_num_curr)) + "/") + string(global.dialog_num_total)) + "\nobj_dialog = ") + string(instance_number(obj_dialog)) + "\ndialog_se = " + string(global.dialog_se) + "\ndialog_se_instance = " + string(global.dialog_se_instance))
+        debug_log += ((((((((((("\n===== Dialog =====\ndialog_mode = " + string(global.dialog_mode)) + "\ndialog_name = ") + string(global.dialog_name)) + "\ndialog_line = ") + string(global.dialog_line)) + "\ndialog_num = ") + string(global.dialog_num_curr)) + "/") + string(global.dialog_num_total)) + "\nobj_dialog = ") + string(instance_number(obj_dialog)) + "\ndialog_se = " + string(global.dialog_se) + "\ndialog_se_instance = " + string(global.dialog_se_instance))
 	draw_text(vx, vy, debug_log)
 }
 

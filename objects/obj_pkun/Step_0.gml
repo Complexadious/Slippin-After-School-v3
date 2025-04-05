@@ -75,7 +75,7 @@ if keyboard_check_pressed(ord("I")) && global.game_debug
 	global.clock_min+= adjust_to_fps(1)
 if keyboard_check_pressed(ord("O")) && global.game_debug
 	global.clock_min-= adjust_to_fps(1)
-if (distance_to_object(nearest) < 50) || !(cam_target_is_pkun && is_controlling_cam_target())
+if (distance_to_object(nearest) < 50) || (!cam_target_is_pkun && is_controlling_cam_target())
 {
     if (intrTarget != nearest)
     {
@@ -317,7 +317,7 @@ if (!game_is_paused())
                 if (adjust_to_fps(intrDone) >= adjust_to_fps(intrNeed))
                 {
 					// sync_pkun_event()
-					interact_event()
+					//interact_event()
 //					if is_multiplayer()
 //						send_client_interact_request_packet(intrTarget)
                     intrDone = 0
@@ -329,11 +329,13 @@ if (!game_is_paused())
 							portalPort = intrTarget.port
 							if (instance_number(obj_p_mob) > 0 && (!global.timeStop))
 	                        {
-	                            with (obj_p_mob)
-	                            {
-	                                if doTrack
-	                                    mob_add_trace()
-	                            }
+								with (obj_p_mob)
+								{
+									if (doTrack) && (current_target == id) {
+										mob_add_trace()
+										mob_disable_ai(_disable_ai_dur)
+									}
+								}
 								baldi_add_tracer()
 	                        }
 						} else if (is_controlling_cam_target()) {
@@ -350,14 +352,14 @@ if (!game_is_paused())
                         intrTarget.shake = (20)
                         x = intrTarget.x
                         hiding = 1
-                        with (obj_p_mob)
-                        {
-                            if doTrack
-                            {
-                                if ((!target_is_near()) || distance_to_object(current_target) > 700)
-                                    lostTarget = 1
-                            }
-                        }
+						with (obj_p_mob)
+						{
+						    if doTrack
+						    {
+						        if (((!target_is_near()) || distance_to_object(current_target) > 700)) && (current_target == id)
+						            lostTarget = 1
+						    }
+						}
                     }
                     else if (intrTarget.type == "itemspot")
                     {
@@ -392,6 +394,7 @@ if (!game_is_paused())
                             instance_destroy()
                         }
                     }
+					interact_event()
                 }
                 else if (!(((intrTarget.type == "hidespot" || intrTarget.type == "mainexit") && intrTarget.locked)))
                     intrDone+= adjust_to_fps(1)

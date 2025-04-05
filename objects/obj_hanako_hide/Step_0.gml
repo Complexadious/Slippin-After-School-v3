@@ -1,10 +1,7 @@
-//// var current_target = get_closest_target(x, y, id)
-
-/// @description Insert description here
-// You can write your code in this editor
+event_inherited()
 current_target = closest_target_thru_walls()
 
-if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
+if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) && (__disable_ai <= 0)
 {
     pit = current_target.intrTarget
     if current_target.hiding
@@ -61,5 +58,3 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
-
-event_inherited()

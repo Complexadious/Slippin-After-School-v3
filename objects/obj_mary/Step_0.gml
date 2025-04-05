@@ -1,7 +1,5 @@
-// var current_target = get_closest_target(x, y, id)
+//event_inherited()
 
-/// @description Insert description here
-// You can write your code in this editor
 if ((!game_is_paused()) && (!global.timeStop))
 {
     if ((wait > 0))
@@ -24,7 +22,7 @@ if ((!game_is_paused()) && (!global.timeStop))
             obj_sys.mini_dialog_timer = 300
             if ((lifespan > 0))
             {
-                if ((lifespan == 1))
+                if ((lifespan == 1)) && (is_multiplayer() && check_is_server()) || (!is_multiplayer())
                 {
                     flr = ((floor((obj_pkun.y / 720)) % 3) + 1)
                     rm = (obj_pkun.np.port % 10)
@@ -44,7 +42,9 @@ if ((!game_is_paused()) && (!global.timeStop))
                     global.mini_dialog_line = ((((getText("mary_front") + "「$ffff00") + loc) + "$ffffff」") + getText("mary_back"))
                 else
                     global.mini_dialog_line = ((((getText("mary_front") + "'$ffff00") + loc) + "$ffffff'") + getText("mary_back"))
-            }
+				if (is_multiplayer() && check_is_server())
+					do_packet(new PLAY_CB_SET_MARY_LOCATION(loc, timer, wait, lifespan), struct_get_names(obj_multiplayer.server.clients))
+			}
             else
             {
                 loc = ""

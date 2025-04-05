@@ -1,4 +1,4 @@
-// var current_target = get_closest_target(x, y, id)
+event_inherited()
 var _is_server = check_is_server()
 
 /// @description Insert description here
@@ -108,5 +108,3 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
-
-event_inherited()

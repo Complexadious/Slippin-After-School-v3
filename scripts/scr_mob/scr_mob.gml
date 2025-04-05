@@ -1,3 +1,7 @@
+function mob_disable_ai(dur) {
+	__disable_ai = dur	
+}
+
 function closest_floor_target() {
 	var _curr_flr = get_floor(y)
 	var _targets = {}
@@ -368,7 +372,7 @@ function pkun_spawn_mob() //gml_Script_pkun_spawn_mob
 function mob_play_ds(argument0) //gml_Script_mob_play_ds
 {
     audio_falloff_set_model(4)
-    if target_is_near() && (abs(current_target.y - y) < 25)
+    if target_is_near()// && (abs(current_target.y - y) < 25)
     {
         var se = audio_play_sound_at(argument0, (obj_pkun.x + (obj_pkun.x - x)), y, 0, 100, 3000, 1, false, 1)
         audio_sound_gain(se, (global.vol_se / 100), 0)
@@ -388,7 +392,7 @@ function mob_play_ds(argument0) //gml_Script_mob_play_ds
 function mob_init_trace() //gml_Script_// mob_init_trace
 {
 	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/mob_init_trace")}
-	_log("Trace init ran!")	
+//	_log("Trace init ran!")	
 	
 	trace_i = -1
 	trace_p = -1

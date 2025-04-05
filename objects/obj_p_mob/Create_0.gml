@@ -16,6 +16,7 @@ state = 0
 controlled = 0
 move_speed = 0
 entity_uuid = ""
+__disable_ai = 0
 
 _pcnt = 0
 closest_target = closest_floor_target()

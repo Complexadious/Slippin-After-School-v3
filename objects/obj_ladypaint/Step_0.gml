@@ -1,8 +1,6 @@
-// var current_target = get_closest_target(x, y, id)
+event_inherited()
 
-/// @description Insert description here
-// You can write your code in this editor
-if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
+if ((!game_is_paused()) && (!global.timeStop) && (!police_stop())) && (__disable_ai <= 0)
 {
 	if yy <= 0 && fall_timer > 0
 		fall_timer-= adjust_to_fps(1)
@@ -41,7 +39,7 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
                 mob_play_ds(choose(se_creak_1, se_creak_2, se_creak_3, se_creak_4))
             }
         }
-        if (target_is_near() && (!((current_target.hiding && lostTarget))))
+        if (target_is_near() && (!((current_target.hiding && lostTarget)))) // ADD SOMETHING THAT DELAYS THIS UNTIL INTERACT SHIT IS DONE!! GAME IS PAUSED NORMALLY DURING TRANSITIONS THAST WHY THIS WORKS!!
         {
             target_x = current_target.x
             lostTarget = 0
@@ -139,5 +137,3 @@ if ((!game_is_paused()) && (!global.timeStop) && (!police_stop()))
 }
 else
     image_speed = 0
-
-event_inherited()

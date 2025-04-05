@@ -46,18 +46,21 @@ function item_use() //gml_Script_item_use
     if ((global.itemSlot[0] == 1))
     {
         play_se(se_drink, 1)
+		play_se_event(se_drink, obj_pkun.x, obj_pkun.y)
         obj_pkun.stmRegen = 100
     }
     else if ((global.itemSlot[0] == 2))
     {
         global.flashPow = 100
         play_se(se_batterychange, 1)
+		play_se_event(se_batterychange, obj_pkun.x, obj_pkun.y)
     }
     else if ((global.itemSlot[0] == 3))
     {
         if ((global.lifeCur < global.lifeMax))
         {
             play_se(se_drink, 1)
+			play_se_event(se_drink, obj_pkun.x, obj_pkun.y)
             global.lifeCur++
         }
         else
@@ -90,10 +93,13 @@ function item_use() //gml_Script_item_use
     else if ((global.itemSlot[0] == 6))
     {
         play_se(se_seal, 1)
-        if ((distance_to_object(obj_jianshi) <= 500))
+		play_se_event(se_seal, obj_pkun.x, obj_pkun.y)
+        if ((distance_to_object(obj_jianshi) <= 500)) {
             obj_jianshi.sealed = 1
-        else
+			entity_event_sync(EVENT_ID.JIANSHI_SEAL, obj_jianshi)
+		} else {
             use = 0
+		}
     }
     if use
     {
