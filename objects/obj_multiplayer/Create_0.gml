@@ -15,15 +15,14 @@
 #macro buffer_position buffer_custom_datatype_start + 5
 #macro buffer_uuid buffer_custom_datatype_start + 6
 #macro buffer_array buffer_custom_datatype_start + 7
-
 #macro buffer_undefined buffer_custom_datatype_start + 8
 #macro buffer_inf buffer_custom_datatype_start + 9
 #macro buffer_pi buffer_custom_datatype_start + 10
 #macro buffer_nan buffer_custom_datatype_start + 11
-
 #macro buffer_struct buffer_custom_datatype_start + 12
 
 #macro BUFFER_DT_ID_TYPE buffer_u8
+#macro BUFFER_PKT_LEN_TYPE buffer_vint
 #macro BUFFER_DT_ID_TYPE_BYTES 1
 
 // X: 15 bits, Y: 15 bits, DIR: 1 bit, AGAINST_WALL: 1 bit
@@ -210,6 +209,11 @@ network = {
 			username: "sigma",
 			entity: entity constructor
 		} */
+	},
+	packet_queue: {
+		/*
+			sock: [buff1 (packet_buffer), buff2, ...]
+		*/
 	}
 }
 

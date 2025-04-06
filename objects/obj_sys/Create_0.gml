@@ -14,6 +14,7 @@ logType = {
 		not_found: "ERROR NOT_FOUND"
 	},
 }
+
 global.mob_sight_range = 4000
 global.mob_reaction_time = 15
 global.mob_force_switch_target_range = 2000
@@ -29,6 +30,8 @@ global_bstep = {}
 
 global.multiplayer_packets_recieved = 0
 global.multiplayer_packets_sent = 0
+global.multiplayer_packets_queued = 0
+global.multiplayer_temp_packets = []
 global.disable_game_keyboard_input = 0
 global.draw_network_obj_hearts = 0
 
@@ -80,6 +83,23 @@ for (var i = 0; i < struct_names_count(global.data_type); i++) {
 
 log("Data Type Lookup Table = " + string(global.data_type_lookup))
 log("Generated Data Type Lookup Table")
+
+
+//var _b1 = buffer_create(1, buffer_grow, 1)
+//buffer_write_ext(_b1, buffer_array, ["sigma", 1, 2, 3])
+//var _b2 = buffer_create(1, buffer_grow, 1)
+//buffer_write_ext(_b2, buffer_string, "buffer_2")
+//var _b3 = buffer_create(1, buffer_grow, 1)
+//buffer_write_ext(_b3, buffer_vlong, 12345678)
+//var _combined = packet_buffer_combine([_b1, _b2, _b3])
+//show_debug_message("combined buffer (" + string(_combined) + ") size: " + string(buffer_get_size(_combined)))
+//var decombined_buffers = packet_buffer_decombine(_combined)
+//show_debug_message("decombined buffers: " + string(decombined_buffers) + ", from buffer (" + string(_combined) + ") size: " + string(buffer_get_size(_combined)))
+//buffer_delete(_combined)
+
+//var b1 = buffer_create(5, buffer_grow, 1)
+//buffer_write_ext(b1, buffer_string, "SIGMA")
+//var b2 = buffer_shift(b1, -2)
 
 var _test_nums = [1, 2, 4, 8, 16, 32, 64, 128, 256, -1, -2, -4, -6, -8, -10, -100, -0, -100.232, -124.26634543, 1/4, "string", []]
 for (var i = 0; i < array_length(_test_nums); i++) {

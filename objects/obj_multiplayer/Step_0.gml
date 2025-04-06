@@ -25,12 +25,29 @@ if (loc[$ "MULTIPLAYER_LOG_TMR"].curr == 1) {
 		__msg+= "\n	- Clients = " + string(struct_get_names(server.clients))
 		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
 		__msg+= "\n	- PPS = " + string(network.statistics.pps)
+		__msg+= "\n	- PACKET_QUEUE = " + string(network.packet_queue)
 	} else {
 		__msg+= "\n	- Players = " + string(struct_get_names(network.players))
 		__msg+= "\n	- Entities = " + string(struct_get_names(network.entities))
 		__msg+= "\n	- PPS = " + string(network.statistics.pps)
+		__msg+= "\n	- PACKET_QUEUE = " + string(network.packet_queue)
 	}
 	__msg += "\n - TIMERS: " + string(network.timers)
 	_log(__msg)	
+}
 
+if (struct_names_count(network.packet_queue) > 0)
+	_log("PACKET_QUEUE!! " + string(network.packet_queue))
+	
+// send all packets to their destination
+var _waiting_socks = struct_get_names(network.packet_queue)
+for (var i = 0; i < array_length(_waiting_socks); i++) {
+	var _sock = _waiting_socks[i]
+	var _packetbuffs = network.packet_queue[$ _sock]
+	_log("Sending '" + string(array_length(_packetbuffs)) + "' packets to sock '" + string(_sock) + "'")
+	var _combined = packet_buffer_combine(_packetbuffs)
+	multiplayer_send_packet(_sock, _combined)
+	struct_remove(network.packet_queue, _sock)
+	
+	buffer_delete(_combined)
 }

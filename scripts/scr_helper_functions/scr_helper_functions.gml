@@ -393,6 +393,82 @@ function buffer_write_ext(buffer_id, type, value, schema = undefined) {
 	}
 }
 
+function buffer_shift(bid, shift) {
+	var _s = buffer_get_size(bid)
+	var tempbuf = buffer_create(_s + shift, buffer_get_type(bid), buffer_get_alignment(bid))
+	buffer_seek(tempbuf, buffer_seek_start, 0)
+	
+	// apply shift
+	if (shift > 0)
+		buffer_copy(bid, 0, _s, tempbuf, shift)
+	else // its negative
+		buffer_copy(bid, abs(shift), _s, tempbuf, 0)
+	buffer_delete(bid)
+	return tempbuf
+}
+
+function packet_buffer_combine(buffers = []) {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/packet_buffer_combine")}
+//	_log("Starting packet combine process for buffers: " + string(buffers))
+	var _packets = array_length(buffers)
+	if (_packets == 1) {
+//		_log("Packets count is 1, shifting packet instead")
+		var _bufferid = buffers[0]
+		var _size = buffer_get_size(_bufferid)
+		var _shifted = buffer_shift(_bufferid, 4)
+		buffer_write_ext(_shifted, buffer_vint, _packets)
+		buffer_write_ext(_shifted, BUFFER_PKT_LEN_TYPE, _size)
+//		_log("Wrote packet count " + string(_packets))
+//		_log("Wrote packet size " + string(_size))
+//		_log("Done, shifted buffer: " + string(_shifted))
+		return _shifted
+	} else {
+//		_log("More than 1 packet, actually combining: " + string(buffers))
+		var _combined = buffer_create(2, buffer_grow, 1)
+		buffer_seek(_combined, buffer_seek_start, 0)
+
+		buffer_write_ext(_combined, buffer_vint, _packets)
+//		_log("Wrote packet count " + string(_packets))
+		
+		for (var i = 0; i < _packets; i++) {
+			var _bufferid = buffers[i]
+			var _size = buffer_get_size(_bufferid)
+			buffer_write_ext(_combined, BUFFER_PKT_LEN_TYPE, _size)
+//			_log("Combining buffer '" + string(_bufferid) + "', size: " + string(_size) + " bytes, at pos " + string(buffer_tell(_combined)))
+			buffer_seek(_bufferid, buffer_seek_start, 0)
+			buffer_copy(_bufferid, 0, _size, _combined, buffer_tell(_combined))
+			buffer_seek(_combined, buffer_seek_relative, _size)
+			buffer_delete(_bufferid)
+		}
+//		_log("Done, combined buffer: " + string(_combined))
+		return _combined
+	}
+}
+
+function packet_buffer_decombine(buffer) {
+	var _log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/packet_buffer_decombine")}
+//	_log("Starting packet decombine process for buffer: " + string(buffer))
+
+	buffer_seek(buffer, buffer_seek_start, 0)
+	var buffers = []
+
+	var _packets = buffer_read_ext(buffer)
+//	_log("Read packet count " + string(_packets))
+
+	for (var i = 0; i < _packets; i++) {
+		var new_buff = buffer_create(1, buffer_grow, 1)
+		var _size = buffer_read_ext(buffer)
+		_log("Seperating buffer '" + string(i) + "', size: " + string(_size) + " bytes, at pos " + string(buffer_tell(buffer)))
+		buffer_copy(buffer, buffer_tell(buffer), _size, new_buff, 0)
+		buffer_seek(buffer, buffer_seek_relative, _size)
+		array_push(buffers, new_buff)
+	}
+	buffer_delete(buffer)
+//	_log("Done, decombined buffers: " + string(buffers))
+	return buffers
+}
+
+
 function hex_lookup(num) {
 	if (num > 15)
 		return "?" + string(num) + "?"

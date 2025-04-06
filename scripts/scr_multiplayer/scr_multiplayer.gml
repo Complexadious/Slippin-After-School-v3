@@ -293,12 +293,30 @@ function check_is_server() {
 	return (obj_multiplayer.network.role == NETWORK_ROLE.SERVER)
 }
 
+function multiplayer_queue_packet(sockets, buffer) {
+	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/multiplayer_queue_packet")}
+	if !is_array(sockets) sockets = [sockets]
+	for (var i = 0; i < array_length(sockets); i++) {
+		var sock = sockets[i]
+		with (obj_multiplayer) {
+			if !struct_exists(network.packet_queue, sock)
+				struct_set(network.packet_queue, sock, [])
+			array_push(network.packet_queue[$ sock], buffer)
+		}
+		global.multiplayer_packets_queued++
+		__log("Sent packet to queue! (" + string(sock) + ")")
+	}
+}
+
 function multiplayer_send_packet(sockets, buffer) {
 	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/multiplayer_send_packet")}
 	if !is_array(sockets) sockets = [sockets]
+	__log("Starting")
 	for (var i = 0; i < array_length(sockets); i++) {
+		__log("In socket " + string(sockets[i]))
 		if instance_exists(obj_multiplayer) {
 			// throttle if too much
+			__log("In multiplayer " + string(sockets[i]))
 			var _network = obj_multiplayer.network
 			if (_network.statistics.pps > _network.settings.max_pps_goal) {
 				__log("PPS IS OVER MAX PPS GOAL!! THROTTLING!!")
@@ -306,35 +324,47 @@ function multiplayer_send_packet(sockets, buffer) {
 			}
 			obj_multiplayer.network.statistics.pps++
 		}
+		__log("about to send packet")
 		network_send_packet(real(sockets[i]), buffer, buffer_get_size(buffer))
 		global.multiplayer_packets_sent++
-		show_debug_message("multiplayer_send_packet: Sent packet out! (" + string(sockets[i]) + ")")
+		__log("Sent packet out! (" + string(sockets[i]) + ")")
 	}
 }
 
 function multiplayer_handle_packet(sock, buffer) {
 	var __log = function(msg, type = logType.info.def) {log(msg, type, "FUNC/multiplayer_handle_packet")}
 	buffer_seek(buffer, buffer_seek_relative, 0)
-	var packet_id = buffer_read_ext(buffer)
-	buffer_seek(buffer, buffer_seek_relative, 0)
-	if ds_map_exists(global.packet_registry, packet_id) {
-		var pkt = new global.packet_registry[? packet_id](sock)
-		if (check_is_server()) {
-			var _sock_state = sock_get_state(sock)
-			if !(pkt.options.connection_state == _sock_state) {
-				__log("Ignoring recieved packet from sock (" + string(sock) + ") due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', sock_state: '" + string(_sock_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logType.warning.def)
-				exit;
+	
+	var packet_count = buffer_read_ext(buffer)
+	var _decombined_packets = packet_buffer_decombine(buffer)
+	
+	__log("Got " + string(packet_count) + " packets!")
+	
+	for (var i = 0; i < array_length(_decombined_packets); i++) {
+		var _pkt_buff = _decombined_packets[i]
+		buffer_seek(_pkt_buff, buffer_seek_relative, 0)
+		var packet_id = buffer_read_ext(_pkt_buff)
+		buffer_seek(_pkt_buff, buffer_seek_relative, 0)
+		if ds_map_exists(global.packet_registry, packet_id) {
+			var pkt = new global.packet_registry[? packet_id](sock)
+			if (check_is_server()) {
+				var _sock_state = sock_get_state(sock)
+				if !(pkt.__options.connection_state == _sock_state) {
+					__log("Ignoring recieved packet from sock (" + string(sock) + ") due to connection_state mismatch! (packet_title: '" + string(pkt.__options.packet_title) + "', sock_state: '" + string(_sock_state) + "', recieved packet_state:'" + string(pkt.__options.connection_state) + "')", logType.warning.def)
+					exit;
+				}
+			} else {
+				if !(pkt.__options.connection_state == obj_multiplayer.network.connection_state) {
+					__log("Ignoring recieved packet due to connection_state mismatch! (packet_title: '" + string(pkt.__options.packet_title) + "', connection_state: '" + string(obj_multiplayer.network.connection_state) + "', recieved packet_state:'" + string(pkt.__options.connection_state) + "')", logType.warning.def)
+					exit;
+				}
 			}
+			pkt.readPacketData(_pkt_buff)
+			pkt.processPacket()
 		} else {
-			if !(pkt.options.connection_state == obj_multiplayer.network.connection_state) {
-				__log("Ignoring recieved packet due to connection_state mismatch! (packet_title: '" + string(pkt.options.packet_title) + "', connection_state: '" + string(obj_multiplayer.network.connection_state) + "', recieved packet_state:'" + string(pkt.options.connection_state) + "')", logType.warning.def)
-				exit;
-			}
+			__log("Packet ID not found in packet registry! (Packet ID: " + string(packet_id) + ")", logType.warning.def)
 		}
-		pkt.readPacketData(buffer)
-		pkt.processPacket()
-	} else {
-		__log("Packet ID not found in packet registry! (Packet ID: " + string(packet_id) + ")", logType.warning.def)
+		buffer_delete(_pkt_buff)
 	}
 }
 
@@ -825,10 +855,11 @@ global.packet_registry = ds_map_create()
 
 /* base */
 function BASE_PACKET(_id = -1) constructor {
-	self.id = _id
-	self.options = {
+	self.__id = _id
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONNECT,
-		packet_title: "BASE_PACKET"
+		packet_title: "BASE_PACKET",
+		packet_size: -1
 	}
 	readPacketData = function(buf) {
 		exit;
@@ -843,27 +874,28 @@ function BASE_PACKET(_id = -1) constructor {
 
 /* CONNECT (ID 5-10) */
 function CONNECT_SB_PING_REQUEST(SOCK = -1, RID = -1) constructor {
-	self.id = 5
-	self.options = {
+	self.__id = 5
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONNECT,
-		packet_title: "CONNECT_SB_PING_REQUEST"
+		packet_title: "CONNECT_SB_PING_REQUEST",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.rid = RID
 	struct_set(obj_multiplayer.network.connection_state_data, "connect_rid", RID)
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.rid = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.rid)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// as server, send it back
@@ -875,25 +907,26 @@ function CONNECT_SB_PING_REQUEST(SOCK = -1, RID = -1) constructor {
 ds_map_add(global.packet_registry, 5, CONNECT_SB_PING_REQUEST)
 
 function CONNECT_CB_PONG_RESPONSE(RID = -1) constructor {
-	self.id = 6
-	self.options = {
+	self.__id = 6
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONNECT,
-		packet_title: "CONNECT_CB_PONG_RESPONSE"
+		packet_title: "CONNECT_CB_PONG_RESPONSE",
+		packet_size: -1
 	}
 	
 	self.rid = RID
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.rid = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.rid)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -911,23 +944,24 @@ function CONNECT_CB_PONG_RESPONSE(RID = -1) constructor {
 ds_map_add(global.packet_registry, 6, CONNECT_CB_PONG_RESPONSE)
 
 function CONNECT_SB_CONNECTION_CONFIRMATION(SOCK = -1) constructor {
-	self.id = 7
-	self.options = {
+	self.__id = 7
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONNECT,
-		packet_title: "CONNECT_SB_CONNECTION_CONFIRMATION"
+		packet_title: "CONNECT_SB_CONNECTION_CONFIRMATION",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -944,22 +978,23 @@ ds_map_add(global.packet_registry, 7, CONNECT_SB_CONNECTION_CONFIRMATION)
 
 //first send client info over, if its correct, we get confirmation, then game state
 function CONFIGURATION_CB_REQUEST_CLIENT_INFO() constructor {
-	self.id = 11
-	self.options = {
+	self.__id = 11
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONFIGURATION,
-		packet_title: "CONFIGURATION_CB_REQUEST_CLIENT_INFO"
+		packet_title: "CONFIGURATION_CB_REQUEST_CLIENT_INFO",
+		packet_size: -1
 	}
 
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -976,29 +1011,30 @@ function CONFIGURATION_CB_REQUEST_CLIENT_INFO() constructor {
 ds_map_add(global.packet_registry, 11, CONFIGURATION_CB_REQUEST_CLIENT_INFO)
 
 function CONFIGURATION_SB_CLIENT_INFO(SOCK = -1, USERNAME = "", POS = [-4, 0, -4, 1]) constructor {
-	self.id = 12
-	self.options = {
+	self.__id = 12
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONFIGURATION,
-		packet_title: "CONFIGURATION_SB_CLIENT_INFO"
+		packet_title: "CONFIGURATION_SB_CLIENT_INFO",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
 	self.client_username = USERNAME
 	self.client_pos = POS
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.client_username = buffer_read_ext(buf)
 		self.client_pos = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.client_username)
 		buffer_write_ext(buf, buffer_position, self.client_pos)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -1029,28 +1065,29 @@ function CONFIGURATION_SB_CLIENT_INFO(SOCK = -1, USERNAME = "", POS = [-4, 0, -4
 ds_map_add(global.packet_registry, 12, CONFIGURATION_SB_CLIENT_INFO)
 
 function CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION(APPROVED = 1, REASON = "") constructor {
-	self.id = 13
-	self.options = {
+	self.__id = 13
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONFIGURATION,
-		packet_title: "CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION"
+		packet_title: "CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION",
+		packet_size: -1
 	}
 
 	self.approved = APPROVED
 	self.reason = REASON
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.approved = buffer_read_ext(buf)
 		self.reason = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_bool, self.approved)
 		buffer_write_ext(buf, buffer_string, self.reason)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -1064,23 +1101,24 @@ function CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION(APPROVED = 1, REASON = "") co
 ds_map_add(global.packet_registry, 13, CONFIGURATION_CB_CLIENT_INFO_CONFIRMATION)
 
 function CONFIGURATION_SB_LOAD_GAME_READY(SOCK = -1) constructor {
-	self.id = 14
-	self.options = {
+	self.__id = 14
+	self.__options = {
 		connection_state: CONNECTION_STATE.CONFIGURATION,
-		packet_title: "CONFIGURATION_SB_LOAD_GAME_READY"
+		packet_title: "CONFIGURATION_SB_LOAD_GAME_READY",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -1099,10 +1137,11 @@ ds_map_add(global.packet_registry, 14, CONFIGURATION_SB_LOAD_GAME_READY)
 
 function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = [], PLAYERS_ARRAY = [], MOBS_ARRAY = [], CLIENT_INFO = [], SERVER_INFO = []) constructor {
 	// send over currently connected players, globals, really just a struct
-	self.id = 31
-	self.options = {
+	self.__id = 31
+	self.__options = {
 		connection_state: CONNECTION_STATE.LOAD_GAME,
-		packet_title: "LOAD_GAME_CB_GAME_STATE"
+		packet_title: "LOAD_GAME_CB_GAME_STATE",
+		packet_size: -1
 	}
 	
 	self.game_state_array = GAME_STATE_ARRAY
@@ -1112,10 +1151,10 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 	self.client_info = CLIENT_INFO
 	self.server_info = SERVER_INFO
 	
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.game_state_array = buffer_read_ext(buf)
 		self.interactables_array = buffer_read_ext(buf)
 		self.players_array = buffer_read_ext(buf)
@@ -1126,8 +1165,8 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 	}
 	writePacketData = function() {
 		var buf = buffer_create(32, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_array, self.game_state_array)
 		buffer_write_ext(buf, buffer_array, self.interactables_array)
 		buffer_write_ext(buf, buffer_array, self.players_array)
@@ -1135,7 +1174,7 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 		buffer_write_ext(buf, buffer_array, self.client_info)
 		buffer_write_ext(buf, buffer_array, self.server_info)
 		packetLog("Wrote Packet. Size is: " + string(buffer_tell(buf)) + " bytes", logType.info.def, "writePacketData")
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// apply stuff
@@ -1307,23 +1346,24 @@ function LOAD_GAME_CB_GAME_STATE(GAME_STATE_ARRAY = [], INTERACTABLES_ARRAY = []
 ds_map_add(global.packet_registry, 31, LOAD_GAME_CB_GAME_STATE)
 
 function LOAD_GAME_SB_CLIENT_LOADED_GAME(SOCK = -1) constructor {
-	self.id = 32
-	self.options = {
+	self.__id = 32
+	self.__options = {
 		connection_state: CONNECTION_STATE.LOAD_GAME,
-		packet_title: "LOAD_GAME_SB_CLIENT_LOADED_GAME"
+		packet_title: "LOAD_GAME_SB_CLIENT_LOADED_GAME",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(2, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -1429,29 +1469,30 @@ PLAY_PACKET = {
 */
 
 function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDING = 0) constructor {
-	self.id = 51
-	self.options = {
+	self.__id = 51
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_MOVE_PLAYER_POS"
+		packet_title: "PLAY_SB_MOVE_PLAYER_POS",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.pos = [X, DX, Y, DIR]
 	self.hiding = HIDING
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
 		self.hiding = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_position, self.pos)
 		buffer_write_ext(buf, buffer_bool, self.hiding)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if !is_array(self.pos) {
@@ -1498,31 +1539,32 @@ function PLAY_SB_MOVE_PLAYER_POS(SOCK = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDIN
 ds_map_add(global.packet_registry, 51, PLAY_SB_MOVE_PLAYER_POS)
 
 function PLAY_CB_MOVE_PLAYER_POS(PID = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDING = 0) constructor {
-	self.id = 52
-	self.options = {
+	self.__id = 52
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_MOVE_PLAYER_POS"
+		packet_title: "PLAY_CB_MOVE_PLAYER_POS",
+		packet_size: -1
 	}	
 	
 	self.pid = PID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.hiding = HIDING
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pid = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
 		self.hiding = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.pid)
 		buffer_write_ext(buf, buffer_position, self.pos)
 		buffer_write_ext(buf, buffer_bool, self.hiding)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.pid < 0) {
@@ -1556,20 +1598,21 @@ function PLAY_CB_MOVE_PLAYER_POS(PID = -1, X = 0, DX = 0, Y = 0, DIR = 0, HIDING
 ds_map_add(global.packet_registry, 52, PLAY_CB_MOVE_PLAYER_POS)
 
 function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE = 0, OBJECT_INDEX = -4) constructor {
-	self.id = 53
-	self.options = {
+	self.__id = 53
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_MOVE_ENTITY_POS"
+		packet_title: "PLAY_CB_MOVE_ENTITY_POS",
+		packet_size: -1
 	}
 	
 	self.eid = EID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.state = STATE
 	self.object_index = OBJECT_INDEX
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.eid = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
 		self.state = buffer_read_ext(buf)
@@ -1577,13 +1620,13 @@ function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.eid)
 		buffer_write_ext(buf, buffer_position, self.pos)
 		buffer_write_ext(buf, buffer_vint, self.state)
 		buffer_write_ext(buf, buffer_vint, self.object_index)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
@@ -1619,20 +1662,21 @@ function PLAY_CB_MOVE_ENTITY_POS(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE 
 ds_map_add(global.packet_registry, 53, PLAY_CB_MOVE_ENTITY_POS)
 
 function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_INDEX = -4, VAR_STRUCT = {}) constructor {
-	self.id = 54
-	self.options = {
+	self.__id = 54
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_CREATE_ENTITY"
+		packet_title: "PLAY_CB_CREATE_ENTITY",
+		packet_size: -1
 	}
 	
 	self.eid = EID
 	self.pos = [X, DX, Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.object_index = OBJECT_INDEX
 	self.variable_struct = VAR_STRUCT
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.eid = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
 		self.object_index = buffer_read_ext(buf)
@@ -1641,13 +1685,13 @@ function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_I
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.eid)
 		buffer_write_ext(buf, buffer_position, self.pos)
 		buffer_write_ext(buf, buffer_vint, self.object_index)
 		buffer_write_ext(buf, ((self.variable_struct == {}) || (struct_names_count(self.variable_struct) == 0)) ? buffer_undefined : buffer_struct, self.variable_struct)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
@@ -1677,26 +1721,27 @@ function PLAY_CB_CREATE_ENTITY(EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, OBJECT_I
 ds_map_add(global.packet_registry, 54, PLAY_CB_CREATE_ENTITY)
 
 function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
-	self.id = 55
-	self.options = {
+	self.__id = 55
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_CREATE_ENTITIES"
+		packet_title: "PLAY_CB_CREATE_ENTITIES",
+		packet_size: -1
 	}
 	
 	self.entities = ENTITIES // [EID, X, DX, Y, DIR, OBJ_INDEX]
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.entities = buffer_read_ext(buf)
 		show_debug_message("PLAY_CB_CREATE_ENTITIES: Read, Entities: " + string(self.entities))
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_array, self.entities)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (array_length(self.entities) <= 0) {
@@ -1717,25 +1762,26 @@ function PLAY_CB_CREATE_ENTITIES(ENTITIES = []) constructor {
 ds_map_add(global.packet_registry, 55, PLAY_CB_CREATE_ENTITIES)
 
 function PLAY_CB_DESTROY_ENTITY(EID = -1) constructor {
-	self.id = 56
-	self.options = {
+	self.__id = 56
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_DESTROY_ENTITY"
+		packet_title: "PLAY_CB_DESTROY_ENTITY",
+		packet_size: -1
 	}
 	
 	self.eid = EID
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.eid = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.eid)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
@@ -1751,25 +1797,26 @@ function PLAY_CB_DESTROY_ENTITY(EID = -1) constructor {
 ds_map_add(global.packet_registry, 56, PLAY_CB_DESTROY_ENTITY)
 
 function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
-	self.id = 57
-	self.options = {
+	self.__id = 57
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_DESTROY_OBJECT"
+		packet_title: "PLAY_CB_DESTROY_OBJECT",
+		packet_size: -1
 	}
 	
 	self.object_index = OBJECT_INDEX
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.object_index = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.object_index)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.object_index == -4) {
@@ -1785,15 +1832,15 @@ function PLAY_CB_DESTROY_OBJECT(OBJECT_INDEX = -4) constructor {
 ds_map_add(global.packet_registry, 57, PLAY_CB_DESTROY_OBJECT)
 
 //function PLAY_CB_UPDATE_ENTITY_VAR(EID = -1, VAR_AND_VAL_ARRAY = [], OBJECT_INDEX = -4) constructor {
-//	self.id = 54
+//	self.__id = 54
 //	self.eid = EID
 //	self.var_and_val_array = VAR_AND_VAL_ARRAY
 ////	self.val_array = VAL_ARRAY
 //	self.object_index = OBJECT_INDEX
 //	readPacketData = function(buf) {
 ////		buffer_seek(buf, buffer_seek_start, 0)
-////		self.id = buffer_read_ext(buf)
-////		self.id = buffer_read_ext(buf)
+////		self.__id = buffer_read_ext(buf)
+////		self.__id = buffer_read_ext(buf)
 ////		self.var_and_val_array = buffer_read_ext(buf)
 //////		self.val_array = buffer_read_ext(buf)
 ////		self.object_index = buffer_read_ext(buf)
@@ -1802,12 +1849,12 @@ ds_map_add(global.packet_registry, 57, PLAY_CB_DESTROY_OBJECT)
 //	writePacketData = function() {
 //		var buf = buffer_create(32, buffer_grow, 1)
 ////		buffer_seek(buf, buffer_seek_start, 0)
-////		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+////		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 //////		buffer_write_ext(buf, buffer_vint, self.eid)
 //////		buffer_write_ext(buf, buffer_array, self.var_and_val_array)
 ////////		buffer_write_ext(buf, buffer_array, self.val_array)
 //////		buffer_write_ext(buf, buffer_vint, self.object_index)
-//		return buf
+//		self.__options.packet_size = buffer_tell(buf); return buf
 //	}
 //	processPacket = function() {
 //		if (self.eid < 0) {
@@ -1841,26 +1888,27 @@ ds_map_add(global.packet_registry, 57, PLAY_CB_DESTROY_OBJECT)
 //ds_map_add(global.packet_registry, 54, PLAY_CB_UPDATE_ENTITY_VAR)
 
 function PLAY_SB_TOGGLE_FLASHLIGHT(SOCK = -1, FLASH = 0) constructor {
-	self.id = 58
-	self.options = {
+	self.__id = 58
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_TOGGLE_FLASHLIGHT"
+		packet_title: "PLAY_SB_TOGGLE_FLASHLIGHT",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.flash = FLASH
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.flash = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_bool, self.flash)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of pkun
@@ -1878,28 +1926,29 @@ function PLAY_SB_TOGGLE_FLASHLIGHT(SOCK = -1, FLASH = 0) constructor {
 ds_map_add(global.packet_registry, 58, PLAY_SB_TOGGLE_FLASHLIGHT)
 
 function PLAY_CB_TOGGLE_FLASHLIGHT(PID = -1, FLASH = 0) constructor {
-	self.id = 59
-	self.options = {
+	self.__id = 59
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_TOGGLE_FLASHLIGHT"
+		packet_title: "PLAY_CB_TOGGLE_FLASHLIGHT",
+		packet_size: -1
 	}
 	
 	self.pid = PID
 	self.flash = FLASH
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pid = buffer_read_ext(buf)
 		self.flash = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.pid)
 		buffer_write_ext(buf, buffer_bool, self.flash)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of pkun
@@ -1913,10 +1962,11 @@ function PLAY_CB_TOGGLE_FLASHLIGHT(PID = -1, FLASH = 0) constructor {
 ds_map_add(global.packet_registry, 59, PLAY_CB_TOGGLE_FLASHLIGHT)
 
 function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HIDE_FL = 0) constructor {
-	self.id = 60
-	self.options = {
+	self.__id = 60
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_SET_HSCENE"
+		packet_title: "PLAY_SB_SET_HSCENE",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
@@ -1925,10 +1975,10 @@ function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 
 	self.hs_snd = HS_SND
 	self.hs_trans_alp = TRANS_ALP
 	self.hs_hide_fl = HIDE_FL
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.mob_id = buffer_read_ext(buf)
 		self.hs_stp = buffer_read_ext(buf)
 		self.hs_snd = buffer_read_ext(buf)
@@ -1939,15 +1989,15 @@ function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.mob_id)
 		buffer_write_ext(buf, buffer_vint, self.hs_stp)
 		buffer_write_ext(buf, ((self.hs_snd == -4) ? buffer_undefined : buffer_vint), self.hs_snd)
 		buffer_write_ext(buf, ((self.hs_trans_alp == 0) ? buffer_undefined : buffer_vint), floor(self.hs_trans_alp * 100)) // 100th accuracy
 		packetLog("_talp: " + string(self.hs_trans_alp) + ", mult: " + string(floor(self.hs_trans_alp * 100)), "HSCENE", "writePacketData")
 		buffer_write_ext(buf, ((self.hs_hide_fl == 0) ? buffer_undefined : buffer_bool), self.hs_hide_fl)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of object
@@ -1976,10 +2026,11 @@ function PLAY_SB_SET_HSCENE(SOCK = -1, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 
 ds_map_add(global.packet_registry, 60, PLAY_SB_SET_HSCENE)
 
 function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HIDE_FL = 0) constructor {
-	self.id = 61
-	self.options = {
+	self.__id = 61
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SET_HSCENE"
+		packet_title: "PLAY_CB_SET_HSCENE",
+		packet_size: -1
 	}
 	
 	self.pid = PID
@@ -1988,10 +2039,10 @@ function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HID
 	self.hs_snd = HS_SND
 	self.hs_trans_alp = TRANS_ALP
 	self.hs_hide_fl = HIDE_FL
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pid = buffer_read_ext(buf)
 		self.mob_id = buffer_read_ext(buf)
 		self.hs_stp = buffer_read_ext(buf)
@@ -2003,8 +2054,8 @@ function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HID
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.pid)
 		buffer_write_ext(buf, buffer_vint, self.mob_id)
 		buffer_write_ext(buf, buffer_vint, self.hs_stp)
@@ -2012,7 +2063,7 @@ function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HID
 		buffer_write_ext(buf, ((self.hs_trans_alp == 0) ? buffer_undefined : buffer_vint), floor(self.hs_trans_alp * 100)) // 100th accuracy
 		packetLog("_talp: " + string(self.hs_trans_alp) + ", mult: " + string(floor(self.hs_trans_alp * 100)), "HSCENE", "writePacketData")
 		buffer_write_ext(buf, ((self.hs_hide_fl == 0) ? buffer_undefined : buffer_bool), self.hs_hide_fl)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust client version of object
@@ -2045,29 +2096,30 @@ function PLAY_CB_SET_HSCENE(PID, MOB_ID, HS_STP, HS_SND = -4, TRANS_ALP = 0, HID
 ds_map_add(global.packet_registry, 61, PLAY_CB_SET_HSCENE)
 
 function PLAY_SB_SET_ENTITY_CONTROL(SOCK = -1, EID_TO_CONTROL = -1, CONTROL = 0) constructor {
-	self.id = 62
-	self.options = {
+	self.__id = 62
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_SET_ENTITY_CONTROL"
+		packet_title: "PLAY_SB_SET_ENTITY_CONTROL",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.eid = EID_TO_CONTROL
 	self.control = CONTROL
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.eid = buffer_read_ext(buf)
 		self.control = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.eid)
 		buffer_write_ext(buf, buffer_bool, self.control)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust client version of object
@@ -2086,20 +2138,21 @@ ds_map_add(global.packet_registry, 62, PLAY_SB_SET_ENTITY_CONTROL)
 
 function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR = 0, STATE = 0) constructor {
 	// THIS REQUIRES THAT THE ENTITY HAS CONTROLLER VARIABLE SET TO CLIENT SOCK
-	self.id = 63
-	self.options = {
+	self.__id = 63
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_MOVE_ENTITY_POS"
+		packet_title: "PLAY_SB_MOVE_ENTITY_POS",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.eid = EID
 	self.pos = [X, abs(DX), Y, DIR] //[X, Y, DIR, TOUCHING_WALL, FLASHLIGHT_ON]
 	self.state = STATE
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.eid = buffer_read_ext(buf)
 		self.pos = buffer_read_ext(buf)
 		self.state = buffer_read_ext(buf)
@@ -2107,12 +2160,12 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.eid)
 		buffer_write_ext(buf, buffer_position, self.pos)
 		buffer_write_ext(buf, buffer_vint, self.state)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		if (self.eid < 0) {
@@ -2145,26 +2198,27 @@ function PLAY_SB_MOVE_ENTITY_POS(SOCK = -1, EID = -1, X = 0, DX = 0, Y = 0, DIR 
 ds_map_add(global.packet_registry, 63, PLAY_SB_MOVE_ENTITY_POS)
 
 function PLAY_SB_SET_TIME_STOP(SOCK = -1, TIMESTOP = 0) constructor {
-	self.id = 64
-	self.options = {
+	self.__id = 64
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_SET_TIME_STOP"
+		packet_title: "PLAY_SB_SET_TIME_STOP",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.timestop = TIMESTOP
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.timestop = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.timestop)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of timestop
@@ -2180,28 +2234,29 @@ function PLAY_SB_SET_TIME_STOP(SOCK = -1, TIMESTOP = 0) constructor {
 ds_map_add(global.packet_registry, 64, PLAY_SB_SET_TIME_STOP)
 
 function PLAY_CB_SET_TIME_STOP(CAN_CLIENT_MOVE_IN_TIMESTOP = 0, TIMESTOP = 0) constructor {
-	self.id = 65
-	self.options = {
+	self.__id = 65
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SET_TIME_STOP"
+		packet_title: "PLAY_CB_SET_TIME_STOP",
+		packet_size: -1
 	}
 	
 	self.can_move = CAN_CLIENT_MOVE_IN_TIMESTOP
 	self.timestop = TIMESTOP
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.can_move = buffer_read_ext(buf)
 		self.timestop = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_bool, self.can_move)
 		buffer_write_ext(buf, buffer_vint, self.timestop)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust client version of timestop
@@ -2213,10 +2268,11 @@ function PLAY_CB_SET_TIME_STOP(CAN_CLIENT_MOVE_IN_TIMESTOP = 0, TIMESTOP = 0) co
 ds_map_add(global.packet_registry, 65, PLAY_CB_SET_TIME_STOP)
 
 function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0, NEW_STATE = -4) constructor {
-	self.id = 66
-	self.options = {
+	self.__id = 66
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_INTERACT_AT"
+		packet_title: "PLAY_SB_INTERACT_AT",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
@@ -2224,10 +2280,10 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0, NEW_STATE 
 	self.x = X
 	self.y = Y
 	self.forced_state = NEW_STATE
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.intr_type = buffer_read_ext(buf)
 		self.x = buffer_read_ext(buf)
 		self.y = buffer_read_ext(buf)
@@ -2235,13 +2291,13 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0, NEW_STATE 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.intr_type)
 		buffer_write_ext(buf, buffer_vint, self.x)
 		buffer_write_ext(buf, buffer_vint, self.y)
 		buffer_write_ext(buf, ((self.forced_state == -4) ? buffer_undefined : buffer_vint), self.forced_state)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// interact with thing on server side
@@ -2367,10 +2423,11 @@ function PLAY_SB_INTERACT_AT(SOCK = -1, INTR_TYPE = "", X = 0, Y = 0, NEW_STATE 
 ds_map_add(global.packet_registry, 66, PLAY_SB_INTERACT_AT)
 
 function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_CLIENT = 0, NEW_STATE = -4) constructor {
-	self.id = 67
-	self.options = {
+	self.__id = 67
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_INTERACT_AT"
+		packet_title: "PLAY_CB_INTERACT_AT",
+		packet_size: -1
 	}
 	
 	self.pid = PID
@@ -2379,10 +2436,10 @@ function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_C
 	self.y = Y
 	self.as_target_client = AS_TARGET_CLIENT
 	self.forced_state = NEW_STATE
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pid = buffer_read_ext(buf)
 		self.intr_type = buffer_read_ext(buf)
 		self.x = buffer_read_ext(buf)
@@ -2392,15 +2449,15 @@ function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_C
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.pid)
 		buffer_write_ext(buf, buffer_string, self.intr_type)
 		buffer_write_ext(buf, buffer_vint, self.x)
 		buffer_write_ext(buf, buffer_vint, self.y)
 		buffer_write_ext(buf, buffer_bool, self.as_target_client)
 		buffer_write_ext(buf, ((self.forced_state == -4) ? buffer_undefined : buffer_vint), self.forced_state)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// interact with thing on client side
@@ -2478,29 +2535,30 @@ function PLAY_CB_INTERACT_AT(PID = -1, INTR_TYPE = "", X = 0, Y = 0, AS_TARGET_C
 ds_map_add(global.packet_registry, 67, PLAY_CB_INTERACT_AT)
 
 function PLAY_SB_SYNC_MINI_MSG(SOCK = -1, MINI_MSG = "", MINI_TMR = 0) constructor {
-	self.id = 68
-	self.options = {
+	self.__id = 68
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_SYNC_MINI_MSG"
+		packet_title: "PLAY_SB_SYNC_MINI_MSG",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.mini_msg = buffer_read_ext(buf)
 		self.mini_tmr = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.mini_msg)
 		buffer_write_ext(buf, buffer_vint, self.mini_tmr)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of object
@@ -2518,31 +2576,32 @@ function PLAY_SB_SYNC_MINI_MSG(SOCK = -1, MINI_MSG = "", MINI_TMR = 0) construct
 ds_map_add(global.packet_registry, 68, PLAY_SB_SYNC_MINI_MSG)
 
 function PLAY_CB_SYNC_MINI_MSG(PID = -1, MINI_MSG = "", MINI_TMR = 0) constructor {
-	self.id = 69
-	self.options = {
+	self.__id = 69
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SYNC_MINI_MSG"
+		packet_title: "PLAY_CB_SYNC_MINI_MSG",
+		packet_size: -1
 	}
 	
 	self.pid = PID
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.pid = buffer_read_ext(buf)
 		self.mini_msg = buffer_read_ext(buf)
 		self.mini_tmr = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.pid)
 		buffer_write_ext(buf, buffer_string, self.mini_msg)
 		buffer_write_ext(buf, buffer_vint, self.mini_tmr)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of object
@@ -2556,26 +2615,27 @@ function PLAY_CB_SYNC_MINI_MSG(PID = -1, MINI_MSG = "", MINI_TMR = 0) constructo
 ds_map_add(global.packet_registry, 69, PLAY_CB_SYNC_MINI_MSG)
 
 function PLAY_SB_DISCONNECT(SOCK = -1, REASON = "notProvided") constructor {
-	self.id = 70
-	self.options = {
+	self.__id = 70
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_DISCONNECT"
+		packet_title: "PLAY_SB_DISCONNECT",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
 	self.reason = REASON
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.reason = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.reason)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of object
@@ -2588,25 +2648,26 @@ function PLAY_SB_DISCONNECT(SOCK = -1, REASON = "notProvided") constructor {
 ds_map_add(global.packet_registry, 70, PLAY_SB_DISCONNECT)
 
 function PLAY_CB_DISCONNECT(REASON = "notProvided") constructor {
-	self.id = 71
-	self.options = {
+	self.__id = 71
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_DISCONNECT"
+		packet_title: "PLAY_CB_DISCONNECT",
+		packet_size: -1
 	}
 	
 	self.reason = REASON
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.reason = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.reason)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust server version of object
@@ -2620,23 +2681,23 @@ function PLAY_CB_DISCONNECT(REASON = "notProvided") constructor {
 ds_map_add(global.packet_registry, 71, PLAY_CB_DISCONNECT)
 
 //function PLAY_SB_SET_PKUN_MINI_MSG(SOCK = -1, MINI_MSG = "", MINI_TMR = 0) constructor {
-//	self.id = 72
+//	self.__id = 72
 //	self.sock = SOCK
 //	self.mini_msg = MINI_MSG
 //	self.mini_tmr = MINI_TMR
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		self.id = buffer_read_ext(buf)
+//		self.__id = buffer_read_ext(buf)
 //		self.mini_msg = buffer_read_ext(buf)
 //		self.mini_tmr = buffer_read_ext(buf)
 //	}
 //	writePacketData = function() {
 //		var buf = buffer_create(1, buffer_grow, 1)
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 //		buffer_write_ext(buf, buffer_string, self.mini_msg)
 //		buffer_write_ext(buf, buffer_vint, self.mini_tmr)
-//		return buf
+//		self.__options.packet_size = buffer_tell(buf); return buf
 //	}
 //	processPacket = function() {
 //		// adjust server version of object
@@ -2654,28 +2715,29 @@ ds_map_add(global.packet_registry, 71, PLAY_CB_DISCONNECT)
 //ds_map_add(global.packet_registry, 72, PLAY_SB_SYNC_MINI_MSG)
 
 function PLAY_CB_SET_PKUN_MINI_MSG(MINI_MSG = "", MINI_TMR = 0) constructor {
-	self.id = 73
-	self.options = {
+	self.__id = 73
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SET_PKUN_MINI_MSG"
+		packet_title: "PLAY_CB_SET_PKUN_MINI_MSG",
+		packet_size: -1
 	}
 	
 	self.mini_msg = MINI_MSG
 	self.mini_tmr = MINI_TMR
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.mini_msg = buffer_read_ext(buf)
 		self.mini_tmr = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.mini_msg)
 		buffer_write_ext(buf, buffer_vint, self.mini_tmr)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// adjust client version of object
@@ -2689,26 +2751,26 @@ function PLAY_CB_SET_PKUN_MINI_MSG(MINI_MSG = "", MINI_TMR = 0) constructor {
 ds_map_add(global.packet_registry, 73, PLAY_CB_SET_PKUN_MINI_MSG)
 
 //function PLAY_SB_UPDATE_USERNAME(SOCK = -1, NEW_USERNAME = "unsetNewUsername") constructor {
-//	self.id = 74
-//	self.options = {
+//	self.__id = 74
+//	self.__options = {
 //		connection_state: CONNECTION_STATE.PLAY,
 //		packet_title: "PLAY_SB_UPDATE_USERNAME"
 //	}
 	
 //	self.sock = SOCK
 //	self.username = NEW_USERNAME
-//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		self.id = buffer_read_ext(buf)
+//		self.__id = buffer_read_ext(buf)
 //		self.username = buffer_read_ext(buf)
 //	}
 //	writePacketData = function() {
 //		var buf = buffer_create(1, buffer_grow, 1)
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 //		buffer_write_ext(buf, buffer_string, self.username)
-//		return buf
+//		self.__options.packet_size = buffer_tell(buf); return buf
 //	}
 //	processPacket = function() {
 //		// adjust server version of object
@@ -2732,28 +2794,28 @@ ds_map_add(global.packet_registry, 73, PLAY_CB_SET_PKUN_MINI_MSG)
 //ds_map_add(global.packet_registry, 74, PLAY_SB_UPDATE_USERNAME)
 
 //function PLAY_CB_UPDATE_USERNAME(OLD_USERNAME, NEW_USERNAME = "unsetNewUsername") constructor {
-//	self.id = 75
-//	self.options = {
+//	self.__id = 75
+//	self.__options = {
 //		connection_state: CONNECTION_STATE.PLAY,
 //		packet_title: "PLAY_CB_UPDATE_USERNAME"
 //	}
 	
 //	self.old_username = OLD_USERNAME
 //	self.username = NEW_USERNAME
-//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		self.id = buffer_read_ext(buf)
+//		self.__id = buffer_read_ext(buf)
 //		self.old_username = buffer_read_ext(buf)
 //		self.username = buffer_read_ext(buf)
 //	}
 //	writePacketData = function() {
 //		var buf = buffer_create(1, buffer_grow, 1)
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 //		buffer_write_ext(buf, buffer_string, self.old_username)
 //		buffer_write_ext(buf, buffer_string, self.username)
-//		return buf
+//		self.__options.packet_size = buffer_tell(buf); return buf
 //	}
 //	processPacket = function() {
 //		// adjust server version of object
@@ -2773,23 +2835,24 @@ ds_map_add(global.packet_registry, 73, PLAY_CB_SET_PKUN_MINI_MSG)
 //ds_map_add(global.packet_registry, 75, PLAY_CB_UPDATE_USERNAME)
 
 function PLAY_SB_KEEP_ALIVE(SOCK = -1) constructor {
-	self.id = 76
-	self.options = {
+	self.__id = 76
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_KEEP_ALIVE"
+		packet_title: "PLAY_SB_KEEP_ALIVE",
+		packet_size: -1
 	}
 	
 	self.sock = SOCK
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		packetLog("Got sock (" + string(self.sock) + ") KEEP_ALIVE")
@@ -2805,22 +2868,23 @@ function PLAY_SB_KEEP_ALIVE(SOCK = -1) constructor {
 ds_map_add(global.packet_registry, 76, PLAY_SB_KEEP_ALIVE)
 
 function PLAY_CB_KEEP_ALIVE() constructor {
-	self.id = 77
-	self.options = {
+	self.__id = 77
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_KEEP_ALIVE"
+		packet_title: "PLAY_CB_KEEP_ALIVE",
+		packet_size: -1
 	}
 
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
-		return buf
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -2838,8 +2902,8 @@ ds_map_add(global.packet_registry, 77, PLAY_CB_KEEP_ALIVE)
 
 //function PLAY_CB_PLAYER_JOINED(USERNAME = "playerJoinedUnsetUsername", X = -4, DX = 0, Y = -4, DIR = 1, PID = -1, FLASH = 1, HIDING = 0) constructor {
 //	// generate player array ([ username, x, dx, y, dir, pid, flash, hiding])
-//	self.id = 78
-//	self.options = {
+//	self.__id = 78
+//	self.__options = {
 //		connection_state: CONNECTION_STATE.PLAY,
 //		packet_title: "PLAY_CB_PLAYER_JOINED"
 //	}
@@ -2849,10 +2913,10 @@ ds_map_add(global.packet_registry, 77, PLAY_CB_KEEP_ALIVE)
 //	self.pid = PID
 //	self.flash = FLASH
 //	self.hiding = HIDING
-//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+//	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 //	readPacketData = function(buf) {
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		self.id = buffer_read_ext(buf)
+//		self.__id = buffer_read_ext(buf)
 //		self.username = buffer_read_ext(buf)
 //		self.pos = buffer_read_ext(buf)
 //		self.pid = buffer_read_ext(buf)
@@ -2862,13 +2926,13 @@ ds_map_add(global.packet_registry, 77, PLAY_CB_KEEP_ALIVE)
 //	writePacketData = function() {
 //		var buf = buffer_create(1, buffer_grow, 1)
 //		buffer_seek(buf, buffer_seek_start, 0)
-//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+//		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 //		buffer_write_ext(buf, buffer_string, self.username)
 //		buffer_write_ext(buf, buffer_position, self.pos)
 //		buffer_write_ext(buf, buffer_vint, self.pid)
 //		buffer_write_ext(buf, buffer_bool, self.flash)
 //		buffer_write_ext(buf, buffer_bool, self.hiding)
-//		return buf
+//		self.__options.packet_size = buffer_tell(buf); return buf
 //	}
 //	processPacket = function() {
 //		// client
@@ -2885,20 +2949,21 @@ ds_map_add(global.packet_registry, 77, PLAY_CB_KEEP_ALIVE)
 //ds_map_add(global.packet_registry, 78, PLAY_CB_PLAYER_JOINED)
 
 function PLAY_CB_SET_MARY_LOCATION(LOC = "", TIMER = 0, WAIT = 0, LIFESPAN = 3) constructor {
-	self.id = 79
-	self.options = {
+	self.__id = 79
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SET_MARY_LOCATION"
+		packet_title: "PLAY_CB_SET_MARY_LOCATION",
+		packet_size: -1
 	}
 
 	self.loc = LOC
 	self.timer = TIMER
 	self.wait = WAIT
 	self.lifespan = LIFESPAN
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.loc = buffer_read_ext(buf)
 		self.timer = buffer_read_ext(buf)
 		self.wait = buffer_read_ext(buf)
@@ -2906,13 +2971,13 @@ function PLAY_CB_SET_MARY_LOCATION(LOC = "", TIMER = 0, WAIT = 0, LIFESPAN = 3) 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_string, self.loc)
 		buffer_write_ext(buf, buffer_vint, self.timer)
 		buffer_write_ext(buf, buffer_vint, self.wait)
 		buffer_write_ext(buf, buffer_vint, self.lifespan)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -2939,20 +3004,21 @@ function PLAY_CB_SET_MARY_LOCATION(LOC = "", TIMER = 0, WAIT = 0, LIFESPAN = 3) 
 ds_map_add(global.packet_registry, 79, PLAY_CB_SET_MARY_LOCATION)
 
 function PLAY_CB_PLAY_SE_AT(SE = -4, X = 0, Y = 0) constructor {
-	self.id = 80
-	self.options = {
+	self.__id = 80
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_PLAY_SE_AT"
+		packet_title: "PLAY_CB_PLAY_SE_AT",
+		packet_size: -1
 	}
 
 	self.se = SE
 	self.x = X
 	self.y = Y
 //	self.vol = VOL
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.se = buffer_read_ext(buf)
 		self.x = buffer_read_ext(buf)
 		self.y = buffer_read_ext(buf)
@@ -2960,13 +3026,13 @@ function PLAY_CB_PLAY_SE_AT(SE = -4, X = 0, Y = 0) constructor {
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.se)
 		buffer_write_ext(buf, buffer_vint, self.x)
 		buffer_write_ext(buf, buffer_vint, self.y)
 //		buffer_write_ext(buf, buffer_vint, self.vol)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -2977,10 +3043,11 @@ function PLAY_CB_PLAY_SE_AT(SE = -4, X = 0, Y = 0) constructor {
 ds_map_add(global.packet_registry, 80, PLAY_CB_PLAY_SE_AT)
 
 function PLAY_SB_PLAY_SE_AT(SOCK = -1, SE = -4, X = 0, Y = 0) constructor {
-	self.id = 81
-	self.options = {
+	self.__id = 81
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_PLAY_SE_AT"
+		packet_title: "PLAY_SB_PLAY_SE_AT",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
@@ -2988,10 +3055,10 @@ function PLAY_SB_PLAY_SE_AT(SOCK = -1, SE = -4, X = 0, Y = 0) constructor {
 	self.x = X
 	self.y = Y
 //	self.vol = VOL
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.se = buffer_read_ext(buf)
 		self.x = buffer_read_ext(buf)
 		self.y = buffer_read_ext(buf)
@@ -2999,13 +3066,13 @@ function PLAY_SB_PLAY_SE_AT(SOCK = -1, SE = -4, X = 0, Y = 0) constructor {
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.se)
 		buffer_write_ext(buf, buffer_vint, self.x)
 		buffer_write_ext(buf, buffer_vint, self.y)
 //		buffer_write_ext(buf, buffer_vint, self.vol)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -3016,20 +3083,21 @@ function PLAY_SB_PLAY_SE_AT(SOCK = -1, SE = -4, X = 0, Y = 0) constructor {
 ds_map_add(global.packet_registry, 81, PLAY_SB_PLAY_SE_AT)
 
 function PLAY_SB_DO_ENTITY_EVENT(SOCK = -1, EVENT_ID = -1, OBJ_INDEX = -4, DATA = undefined) constructor {
-	self.id = 82
-	self.options = {
+	self.__id = 82
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_SB_DO_ENTITY_EVENT"
+		packet_title: "PLAY_SB_DO_ENTITY_EVENT",
+		packet_size: -1
 	}
 
 	self.sock = SOCK
 	self.object_index = OBJ_INDEX
 	self.event_id = EVENT_ID
 	self.data = DATA
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.object_index = buffer_read_ext(buf)
 		self.event_id = buffer_read_ext(buf)
 		var _data = buffer_read_ext(buf)
@@ -3037,12 +3105,12 @@ function PLAY_SB_DO_ENTITY_EVENT(SOCK = -1, EVENT_ID = -1, OBJ_INDEX = -4, DATA 
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.object_index)
 		buffer_write_ext(buf, buffer_vint, self.event_id)
 		buffer_write_ext(buf, ((self.data != undefined) ? value_to_datatype(self.data) : buffer_undefined), self.data)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// server
@@ -3053,19 +3121,20 @@ function PLAY_SB_DO_ENTITY_EVENT(SOCK = -1, EVENT_ID = -1, OBJ_INDEX = -4, DATA 
 ds_map_add(global.packet_registry, 82, PLAY_SB_DO_ENTITY_EVENT)
 
 function PLAY_CB_DO_ENTITY_EVENT(EVENT_ID = -1, OBJ_INDEX = -4, DATA = undefined) constructor {
-	self.id = 83
-	self.options = {
+	self.__id = 83
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_DO_ENTITY_EVENT"
+		packet_title: "PLAY_CB_DO_ENTITY_EVENT",
+		packet_size: -1
 	}
 
 	self.object_index = OBJ_INDEX
 	self.event_id = EVENT_ID
 	self.data = DATA
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.object_index = buffer_read_ext(buf)
 		self.event_id = buffer_read_ext(buf)
 		var _data = buffer_read_ext(buf)
@@ -3074,12 +3143,12 @@ function PLAY_CB_DO_ENTITY_EVENT(EVENT_ID = -1, OBJ_INDEX = -4, DATA = undefined
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.object_index)
 		buffer_write_ext(buf, buffer_vint, self.event_id)
 		buffer_write_ext(buf, ((self.data != undefined) ? value_to_datatype(self.data) : buffer_undefined), self.data)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -3090,20 +3159,21 @@ function PLAY_CB_DO_ENTITY_EVENT(EVENT_ID = -1, OBJ_INDEX = -4, DATA = undefined
 ds_map_add(global.packet_registry, 83, PLAY_CB_DO_ENTITY_EVENT)
 
 function PLAY_CB_SET_TIME(HR, MIN, TK, TK_SPD) constructor {
-	self.id = 84
-	self.options = {
+	self.__id = 84
+	self.__options = {
 		connection_state: CONNECTION_STATE.PLAY,
-		packet_title: "PLAY_CB_SET_TIME"
+		packet_title: "PLAY_CB_SET_TIME",
+		packet_size: -1
 	}
 
 	self.hr = HR
 	self.min = MIN
 	self.tk = TK
 	self.tk_spd = TK_SPD
-	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.options.packet_title) + "/" + string(packet_func))}
+	packetLog = function(msg, type = logType.info.def, packet_func = "processPacket") {log(msg, type, "PKT/" + string(self.__options.packet_title) + "/" + string(packet_func))}
 	readPacketData = function(buf) {
 		buffer_seek(buf, buffer_seek_start, 0)
-		self.id = buffer_read_ext(buf)
+		self.__id = buffer_read_ext(buf)
 		self.hr = buffer_read_ext(buf)
 		self.min = buffer_read_ext(buf)
 		self.tk = buffer_read_ext(buf)
@@ -3111,13 +3181,13 @@ function PLAY_CB_SET_TIME(HR, MIN, TK, TK_SPD) constructor {
 	}
 	writePacketData = function() {
 		var buf = buffer_create(1, buffer_grow, 1)
-		buffer_seek(buf, buffer_seek_start, 0)
-		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.id)
+ 		buffer_seek(buf, buffer_seek_start, 0)
+		buffer_write_ext(buf, BUFFER_DT_ID_TYPE, self.__id)
 		buffer_write_ext(buf, buffer_vint, self.hr)
 		buffer_write_ext(buf, buffer_vint, self.min)
 		buffer_write_ext(buf, buffer_vint, self.tk)
 		buffer_write_ext(buf, buffer_vint, self.tk_spd)
-		return buf
+		self.__options.packet_size = buffer_tell(buf); return buf
 	}
 	processPacket = function() {
 		// client
@@ -3138,8 +3208,7 @@ ds_map_add(global.packet_registry, 84, PLAY_CB_SET_TIME)
 /// @description Sends a constructed packet.
 function do_packet(pkt, target_socks) {
 	var pktbuf = pkt.writePacketData()
-	multiplayer_send_packet(target_socks, pktbuf)
-	buffer_delete(pktbuf)
+	multiplayer_queue_packet(target_socks, pktbuf)
 }
 
 // packet sending functions
